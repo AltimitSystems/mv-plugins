@@ -1,0 +1,16 @@
+### RPG Maker MV Project ###
+audio
+data
+fonts
+icon
+img
+js/*
+!js/plugins
+js/plugins/*
+movies
+save
+Game.rpgproject
+index.html
+
+### AltimitMovement ###
+!js/plugins/AltimitMovement.js
