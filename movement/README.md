@@ -1,2 +1,2 @@
-# mv-plugins
-Altimit Systems RPG Maker MV Plugin collection
+# Altimit Movement
+Vector-based character movement and collision
