@@ -54,7 +54,7 @@
  */
 ( function() {
 
-  var COLLISION_MESH_CACHING = PluginManager.parameters( 'AltimitMovement' )['collisionmeshcaching'] !== 'false';
+  var COLLISION_MESH_CACHING = PluginManager.parameters( 'AltimitMovement' )['collision_mesh_caching'] !== 'false';
 
   /**
    * Game_CharacterBase
