@@ -57,6 +57,77 @@
   var COLLISION_MESH_CACHING = PluginManager.parameters( 'AltimitMovement' )['collision_mesh_caching'] !== 'false';
 
   /**
+   * Game_System
+   */
+  ( function() {
+
+    /**
+     * Overrides
+     */
+   ( function() {
+
+     var Game_System_initialize = Game_System.prototype.initialize;
+     Game_System.prototype.initialize = function() {
+       Game_System_initialize.call( this );
+       this._eventColliders = [];
+     };
+
+   } )();
+
+    /**
+     * Extensions
+     */
+    ( function() {
+
+      Game_System.prototype.colliderCreateList = function() {
+        return Collider.createList();
+      };
+
+      Game_System.prototype.colliderAddToList = function( list, collider ) {
+        return Collider.addToList( list, collider );
+      };
+
+      Game_System.prototype.colliderCreateCircle = function( x, y, radius ) {
+        return Collider.createCircle( x, y, radius );
+      };
+
+      Game_System.prototype.colliderCreatePolygon = function( vertices ) {
+        return Collider.createPolygon( vertices );
+      };
+
+      Game_System.prototype.colliderCreateRegularPolygon = function( x, y, sx, sy, points ) {
+        return Collider.createRegularPolygon( x, y, sx, sy, points );
+      };
+
+      Game_System.prototype.colliderSharedTile = function() {
+        return Collider.sharedTile();
+      };
+
+      Game_System.prototype.colliderSharedCircle = function() {
+        return Collider.sharedCircle();
+      };
+
+      Game_System.prototype.colliderSharedCharacter = function() {
+        return Collider.sharedCharacter();
+      };
+
+      Game_System.prototype.colliderSharedAirship = function() {
+        return Collider.sharedAirship();
+      };
+
+      Game_System.prototype.colliderSharedShip = function() {
+        return Collider.sharedShip();
+      };
+
+      Game_System.prototype.colliderSharedBoat = function() {
+        return Collider.sharedBoat();
+      };
+
+    } )();
+
+  } )();
+
+  /**
    * Game_CharacterBase
    */
   ( function() {
@@ -87,6 +158,7 @@
             this.moveVector( dx * this.stepDistance, dy * this.stepDistance );
             if ( !this.isMovementSucceeded() && this._moveRoute.skippable ) {
               this._moveTarget = false;
+              this.setDirectionFix( this._willUnfixDirection );
             }
           }
         }
@@ -175,6 +247,9 @@
         return !!character
           && character !== this
           && character.isNormalPriority()
+          && !character.isThrough()
+          && !this.isThrough()
+          && character._mapId === $gameMap.mapId()
           && ( !character.isVisible ? true : character.isVisible() )
           && ( !this.vehicle ? true : this.vehicle() !== character )
           && ( !this.followers ? true : !this.followers().contains( character ) )
@@ -258,7 +333,7 @@
             else if ( bboxTests[ii].type == 7 ) { offsetX += $gameMap.width(); offsetY -= $gameMap.height(); }
             else if ( bboxTests[ii].type == 8 ) { offsetX -= $gameMap.width(); offsetY -= $gameMap.height(); }
 
-            var mapColliders = Collider.polygonsWithinColliderList( bboxTests[ii].x + vx, bboxTests[ii].y + vy, bboxTests[ii].aabbox, offsetX, offsetY, $gameMap.collisionMesh() );
+            var mapColliders = Collider.polygonsWithinColliderList( bboxTests[ii].x + vx, bboxTests[ii].y + vy, bboxTests[ii].aabbox, 0, 0, $gameMap.collisionMesh() );
             if ( mapColliders.length > 0 ) {
                 if ( move.x !== 0 ) {
                   var sigMove = { x: move.x, y: 0 };
@@ -446,6 +521,8 @@
           this._moveTargetY = Math.round( this._y - 1 );
           break;
         case gc.ROUTE_MOVE_FORWARD:
+          this._willUnfixDirection = this.isDirectionFixed();
+          this.setDirectionFix( true );
           var vx = Direction.isLeft( this._direction ) ? -1 : ( Direction.isRight( this._direction ) ? 1 : 0 );
           var vy = Direction.isUp( this._direction ) ? -1 : ( Direction.isDown( this._direction ) ? 1 : 0 );
           this._moveTarget = true;
@@ -453,6 +530,8 @@
           this._moveTargetY = Math.round( this._y + vy );
           break;
         case gc.ROUTE_MOVE_BACKWARD:
+          this._willUnfixDirection = this.isDirectionFixed();
+          this.setDirectionFix( true );
           var vx = Direction.isLeft( this._direction ) ? -1 : ( Direction.isRight( this._direction ) ? 1 : 0 );
           var vy = Direction.isUp( this._direction ) ? -1 : ( Direction.isDown( this._direction ) ? 1 : 0 );
           this._moveTarget = true;
@@ -692,20 +771,21 @@
         var airship = $gameMap.airship();
         var ship = $gameMap.ship();
         var boat = $gameMap.boat();
+
         for ( var ii = 0; ii < bboxTests.length; ii++ ) {
-          if ( Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, airship._x, airship._y, airship.collider().aabbox ) ) {
+          if ( !!airship && airship._mapId === $gameMap.mapId() == $gameMap.mapId() && Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, airship._x, airship._y, airship.collider().aabbox ) ) {
             this._vehicleType = 'airship';
             $gameMap.collisionType = CollisionMesh.AIRSHIP;
             vehicle = airship;
             break;
           }
-          if ( Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, ship._x, ship._y, ship.collider().aabbox ) ) {
+          if ( !!ship && ship._mapId === $gameMap.mapId() && Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, ship._x, ship._y, ship.collider().aabbox ) ) {
             this._vehicleType = 'ship';
             $gameMap.collisionType = CollisionMesh.SHIP;
             vehicle = ship;
             break;
           }
-          if ( Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, boat._x, boat._y, boat.collider().aabbox ) ) {
+          if ( !!boat && boat._mapId === $gameMap.mapId() && Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, boat._x, boat._y, boat.collider().aabbox ) ) {
             this._vehicleType = 'boat';
             $gameMap.collisionType = CollisionMesh.BOAT;
             vehicle = boat;
@@ -920,7 +1000,7 @@
           } else {
             this.updateMove();
           }
-          this.forEach( function( follower ) {
+          this.visibleFollowers().forEach( function( follower ) {
             follower.update();
           }, this );
       };
@@ -1078,11 +1158,7 @@
       var Game_Event_setupPageSettings = Game_Event.prototype.setupPageSettings;
       Game_Event.prototype.setupPageSettings = function() {
         Game_Event_setupPageSettings.call( this );
-        if ( this.isTile() || !this.characterName() || this.isObjectCharacter() ) {
-          this._collider = Collider.sharedTile();
-        } else {
-          this._collider = Collider.sharedCharacter();
-        }
+        this.collider();
       };
 
       var Game_Event_start = Game_Event.prototype.start;
@@ -1092,6 +1168,33 @@
         }
         Game_Event_start.call( this );
         this._lastFrame = Graphics.frameCount + 1;
+      };
+
+      Game_Event.prototype.collider = function() {
+        var page = this.page();
+        if ( !!page ) {
+          if ( !page._collider ) {
+            var mapId = $gameMap.mapId();
+            var storedCollider = $gameSystem._eventColliders[mapId] ? $gameSystem._eventColliders[mapId][this.eventId()] : undefined;
+            if ( !!storedCollider ) {
+              page._collider = storedCollider;
+            } else if ( this.isTile() || !this.characterName() || this.isObjectCharacter() ) {
+              page._collider = Collider.sharedTile();
+            } else {
+              page._collider = Collider.sharedCharacter();
+            }
+          }
+          return page._collider;
+        }
+        return Collider.null();
+      };
+
+      Game_Event.prototype.setCollider = function( collider ) {
+        var pages = this.event().pages;
+        for ( var ii = 0; ii < pages.length; ii++ ) {
+          pages[ii]._collider = collider;
+        }
+        $gameSystem._eventColliders[$gameMap.mapId()][this.eventId()] = collider;
       };
 
       Game_Event.prototype.checkEventTriggerTouch = function( x, y ) {
@@ -1131,32 +1234,32 @@
 
   } )();
 
-  /**
-   * Game_Interpreter
-   */
-  ( function() {
-
-    /**
-     * Overrides
-     */
-    ( function() {
-
-      // Set Movement Route
-      Game_Interpreter.prototype.command205 = function() {
-        $gameMap.refreshIfNeeded();
-        this._character = this.character( this._params[0] );
-        if ( this._character ) {
-          this._character.forceMoveRoute( this._params[1] );
-          if ( this._params[1].wait ) {
-            this.setWaitMode( 'route' );
-          }
-        }
-        return true;
-      };
-
-    } )();
-
-  } )();
+  // /**
+  //  * Game_Interpreter
+  //  */
+  // ( function() {
+  //
+  //   /**
+  //    * Overrides
+  //    */
+  //   ( function() {
+  //
+  //     // Set Movement Route
+  //     Game_Interpreter.prototype.command205 = function() {
+  //       $gameMap.refreshIfNeeded();
+  //       this._character = this.character( this._params[0] );
+  //       if ( this._character ) {
+  //         this._character.forceMoveRoute( this._params[1] );
+  //         if ( this._params[1].wait ) {
+  //           this.setWaitMode( 'route' );
+  //         }
+  //       }
+  //       return true;
+  //     };
+  //
+  //   } )();
+  //
+  // } )();
 
   /**
    * Game_Map
@@ -1171,6 +1274,9 @@
       var Game_Map_setup = Game_Map.prototype.setup;
       Game_Map.prototype.setup = function( mapId ) {
         Game_Map_setup.call( this, mapId );
+        if ( !$gameSystem._eventColliders[mapId] ) {
+          $gameSystem._eventColliders[mapId] = [];
+        }
         this.setupCollisionMesh();
       };
 
@@ -1323,7 +1429,7 @@
           else if ( bboxTests[ii].type == 7 ) { offsetX += this.width(); offsetY -= this.height(); }
           else if ( bboxTests[ii].type == 8 ) { offsetX -= this.width(); offsetY -= this.height(); }
 
-          var mapColliders = Collider.polygonsWithinColliderList( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, offsetX, offsetY, collisionMesh );
+          var mapColliders = Collider.polygonsWithinColliderList( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, 0, 0, collisionMesh );
           if ( mapColliders.length > 0 ) {
             for ( var jj = 0; jj < mapColliders.length; jj++ ) {
               if ( Collider.intersect( x, y, collider, offsetX, offsetY, mapColliders[jj] ) ) {
@@ -1643,6 +1749,13 @@
         vertices.push( [ x + Math.cos( ii / divisor - pi2 ) * sx, y + Math.sin( ii / divisor - pi2 ) * sy ] );
       }
       return Collider.createPolygon( vertices );
+    };
+
+    Collider.null = function() {
+      if ( !Collider._null ) {
+        Collider._null = Collider.createPolygon( [] );
+      }
+      return Collider._null;
     };
 
     Collider.sharedTile = function() {
