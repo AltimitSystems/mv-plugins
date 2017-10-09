@@ -294,9 +294,10 @@
         } else {
           this.setMovementSuccess( false );
           this.setDirectionVector( vx, vy );
-          this.checkEventTriggerTouchFront( Direction.fromVector( vx, vy ) );
           this._isMoving = false;
         }
+
+        this.checkEventTriggerTouchFrontVector( dx, dy );
       };
 
       Game_CharacterBase.prototype.setDirectionVector = function( vx, vy ) {
@@ -313,6 +314,10 @@
         } else {
           this.setDirection( dx || dy );
         }
+      };
+
+      Game_CharacterBase.prototype.checkEventTriggerTouchFrontVector = function( vx, vy ) {
+        this.checkEventTriggerTouch( this._x + vx, this._y + vy );
       };
 
       Game_CharacterBase.prototype.align = function() {
@@ -484,6 +489,8 @@
         this._collider = Collider.sharedCharacter();
       };
 
+      Game_Player.prototype.checkEventTriggerTouch = Game_CharacterBase.prototype.checkEventTriggerTouch;
+
       var Game_Player_encounterProgressValue = Game_Player.prototype.encounterProgressValue;
       Game_Player.prototype.encounterProgressValue = function() {
         return Game_Player_encounterProgressValue.call( this ) * this.stepDistance;
@@ -522,13 +529,25 @@
           var bboxTests = $gameMap.getAABBoxTests( this );
           var player = this;
 
+          var vx = Direction.isLeft( this._direction ) ? -this.stepDistance : ( Direction.isRight( this._direction ) ? this.stepDistance : 0 );
+          var vy = Direction.isUp( this._direction ) ? -this.stepDistance : ( Direction.isDown( this._direction ) ? this.stepDistance : 0 );
+
           // Gather any solid characters within the "here" bounding box
           var loopMap = {};
           var events = $gameMap.events().filter( function( event ) {
             for ( var ii = 0; ii < bboxTests.length; ii++ ) {
-              if ( event.isTriggerIn( triggers ) && !event.isNormalPriority() && Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, event._x, event._y, event.collider().aabbox ) ) {
-                loopMap[event] = bboxTests[ii].type;
-                return true;
+              if ( event.isTriggerIn( triggers ) ) {
+                if ( event.isNormalPriority() ) {
+                  if ( Collider.aabboxCheck( bboxTests[ii].x + vx, bboxTests[ii].y + vy, bboxTests[ii].aabbox, event._x, event._y, event.collider().aabbox ) ) {
+                    loopMap[event] = bboxTests[ii].type;
+                    return true;
+                  }
+                } else {
+                  if ( Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, event._x, event._y, event.collider().aabbox ) ) {
+                    loopMap[event] = bboxTests[ii].type;
+                    return true;
+                  }
+                }
               }
             }
             return false;
@@ -539,16 +558,19 @@
             var entryX = events[ii]._x;
             var entryY = events[ii]._y;
 
-            if ( loopMap[events[ii]] == 1 ) { entryX += this.width(); }
-            else if ( loopMap[events[ii]] == 2 ) { entryX -= this.width(); }
-            else if ( loopMap[events[ii]] == 3 ) { entryY += this.height(); }
-            else if ( loopMap[events[ii]] == 4 ) { entryY -= this.height(); }
-            else if ( loopMap[events[ii]] == 5 ) { entryX += this.width(); entryY += this.height(); }
-            else if ( loopMap[events[ii]] == 6 ) { entryX -= this.width(); entryY += this.height(); }
-            else if ( loopMap[events[ii]] == 7 ) { entryX += this.width(); entryY -= this.height(); }
-            else if ( loopMap[events[ii]] == 8 ) { entryX -= this.width(); entryY -= this.height(); }
+            if ( loopMap[events[ii]] == 1 ) { entryX += $gameMap.width(); }
+            else if ( loopMap[events[ii]] == 2 ) { entryX -= $gameMap.width(); }
+            else if ( loopMap[events[ii]] == 3 ) { entryY += $gameMap.height(); }
+            else if ( loopMap[events[ii]] == 4 ) { entryY -= $gameMap.height(); }
+            else if ( loopMap[events[ii]] == 5 ) { entryX += $gameMap.width(); entryY += $gameMap.height(); }
+            else if ( loopMap[events[ii]] == 6 ) { entryX -= $gameMap.width(); entryY += $gameMap.height(); }
+            else if ( loopMap[events[ii]] == 7 ) { entryX += $gameMap.width(); entryY -= $gameMap.height(); }
+            else if ( loopMap[events[ii]] == 8 ) { entryX -= $gameMap.width(); entryY -= $gameMap.height(); }
 
-            if ( events[ii]._trigger === 2 ) {
+            if ( events[ii].isNormalPriority() && Collider.intersect( this._x + vx, this._y + vy, collider, entryX, entryY, events[ii].collider() ) ) {
+              // Normal priority player-touch/event-touch
+              events[ii].start();
+            } else if ( events[ii]._trigger === 2 ) {
               // Event touch is encasing
               if ( Collider.encase( this._x, this._y, collider, entryX, entryY, events[ii].collider() ) || Collider.encase( entryX, entryY, events[ii].collider(), this._x, this._y, collider ) ) {
                 events[ii].start();
@@ -586,14 +608,14 @@
             var entryX = events[ii]._x;
             var entryY = events[ii]._y;
 
-            if ( loopMap[events[ii]] == 1 ) { entryX += this.width(); }
-            else if ( loopMap[events[ii]] == 2 ) { entryX -= this.width(); }
-            else if ( loopMap[events[ii]] == 3 ) { entryY += this.height(); }
-            else if ( loopMap[events[ii]] == 4 ) { entryY -= this.height(); }
-            else if ( loopMap[events[ii]] == 5 ) { entryX += this.width(); entryY += this.height(); }
-            else if ( loopMap[events[ii]] == 6 ) { entryX -= this.width(); entryY += this.height(); }
-            else if ( loopMap[events[ii]] == 7 ) { entryX += this.width(); entryY -= this.height(); }
-            else if ( loopMap[events[ii]] == 8 ) { entryX -= this.width(); entryY -= this.height(); }
+            if ( loopMap[events[ii]] == 1 ) { entryX += $gameMap.width(); }
+            else if ( loopMap[events[ii]] == 2 ) { entryX -= $gameMap.width(); }
+            else if ( loopMap[events[ii]] == 3 ) { entryY += $gameMap.height(); }
+            else if ( loopMap[events[ii]] == 4 ) { entryY -= $gameMap.height(); }
+            else if ( loopMap[events[ii]] == 5 ) { entryX += $gameMap.width(); entryY += $gameMap.height(); }
+            else if ( loopMap[events[ii]] == 6 ) { entryX -= $gameMap.width(); entryY += $gameMap.height(); }
+            else if ( loopMap[events[ii]] == 7 ) { entryX += $gameMap.width(); entryY -= $gameMap.height(); }
+            else if ( loopMap[events[ii]] == 8 ) { entryX -= $gameMap.width(); entryY -= $gameMap.height(); }
 
             if ( events[ii]._trigger === 2 ) {
               // Event touch is encasing
@@ -645,12 +667,6 @@
 
             closest.start();
           }
-        }
-      };
-
-      Game_Player.prototype.checkEventTriggerTouch = function( x, y ) {
-        if ( this.canStartLocalEvents() ) {
-          this.startMapEvent( x, y, [1,2], true );
         }
       };
 
@@ -1066,6 +1082,48 @@
           this._collider = Collider.sharedTile();
         } else {
           this._collider = Collider.sharedCharacter();
+        }
+      };
+
+      var Game_Event_start = Game_Event.prototype.start;
+      Game_Event.prototype.start = function() {
+        if ( this._lastFrame === Graphics.frameCount ) {
+          return;
+        }
+        Game_Event_start.call( this );
+        this._lastFrame = Graphics.frameCount + 1;
+      };
+
+      Game_Event.prototype.checkEventTriggerTouch = function( x, y ) {
+        if ( this._trigger === 2 && !$gameMap.isEventRunning() && !this.isJumping() && this.isNormalPriority() ) {
+          var bboxTests = $gameMap.getAABBoxTests( this, x - this._x, y - this._y );
+          var loopMap = -1;
+          for ( var ii = 0; ii < bboxTests.length; ii++ ) {
+            if ( Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, $gamePlayer._x, $gamePlayer._y, $gamePlayer.collider().aabbox ) ) {
+              loopMap = bboxTests[ii].type;
+              break;
+            }
+          }
+
+          if ( loopMap < 0 ) {
+            return;
+          }
+
+          var playerX = $gamePlayer._x;
+          var playerY = $gamePlayer._y;
+
+          if ( loopMap == 1 ) { playerX += $gameMap.width(); }
+          else if ( loopMap == 2 ) { playerX -= $gameMap.width(); }
+          else if ( loopMap == 3 ) { playerY += $gameMap.height(); }
+          else if ( loopMap == 4 ) { playerY -= $gameMap.height(); }
+          else if ( loopMap == 5 ) { playerX += $gameMap.width(); playerY += $gameMap.height(); }
+          else if ( loopMap == 6 ) { playerX -= $gameMap.width(); playerY += $gameMap.height(); }
+          else if ( loopMap == 7 ) { playerX += $gameMap.width(); playerY -= $gameMap.height(); }
+          else if ( loopMap == 8 ) { playerX -= $gameMap.width(); playerY -= $gameMap.height(); }
+
+          if ( Collider.intersect( x, y, this.collider(), playerX, playerY, $gamePlayer.collider() ) ) {
+            this.start();
+          }
         }
       };
 

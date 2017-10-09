@@ -153,7 +153,7 @@
 
         VectorDebugLayer.prototype.update = function() {
           this.bitmap.clearRect( 0, 0, this.bitmap.width, this.bitmap.height );
-          if ( !default_display ) {
+          if ( !default_display || !$gameMap.collisionMesh ) {
             return;
           }
 
