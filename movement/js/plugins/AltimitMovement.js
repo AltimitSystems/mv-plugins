@@ -148,15 +148,15 @@
           var dx, dy;
           if ( $gameMap.isLoopHorizontal() ) {
             var dxA = this._moveTargetX - this._x;
-            var dxB = $gameMap.roundX( this._moveTargetX ) - $gameMap.roundX( this._x );
+            var dxB = $gameMap.roundX( this._moveTargetX ) - this._x;
             dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
           } else {
             dx = this._moveTargetX - this._x;
           }
-          
+
           if ( $gameMap.isLoopVertical() ) {
             var dyA = this._moveTargetY - this._y;
-            var dyB = $gameMap.roundY( this._moveTargetY ) - $gameMap.roundY( this._y );
+            var dyB = $gameMap.roundY( this._moveTargetY ) - this._y;
             dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
           } else {
             dy = this._moveTargetY - this._y;
@@ -171,7 +171,7 @@
             dx /= length;
             dy /= length;
             this.moveVector( dx * this.stepDistance, dy * this.stepDistance );
-            if ( !this.isMovementSucceeded() && this._moveRoute.skippable ) {
+            if ( !this.isMovementSucceeded() && !!this._moveRoute && this._moveRoute.skippable ) {
               this._moveTarget = false;
               this.setDirectionFix( this._willUnfixDirection );
             }
@@ -560,10 +560,6 @@
         }
       };
 
-      Game_Character.prototype.findDirectionTo = function( goalX, goalY ) {
-        // TODO : Replace this
-      };
-
     } )();
 
   } )();
@@ -616,6 +612,10 @@
 
       Game_Player.prototype.getInputDirection = function() {
         return Input.dir8;
+      };
+
+      Game_Player.prototype.findDirectionTo = function( goalX, goalY ) {
+        return false;
       };
 
       Game_Player.prototype.checkEventTriggerHere = function( triggers ) {
@@ -1301,6 +1301,20 @@
         var width = $dataMap.width;
         var height = $dataMap.height;
         return $dataMap.data[( z * height + y ) * width + x] || 0;
+      };
+
+      Game_Map.prototype.canvasToMapX = function( x ) {
+        var tileWidth = this.tileWidth();
+        var originX = this._displayX * tileWidth;
+        var mapX = ( originX + x ) / tileWidth;
+        return this.roundX( mapX );
+      };
+
+      Game_Map.prototype.canvasToMapY = function( y ) {
+        var tileHeight = this.tileHeight();
+        var originY = this._displayY * tileHeight;
+        var mapY = ( originY + y ) / tileHeight;
+        return this.roundY( mapY );
       };
 
     } )();
