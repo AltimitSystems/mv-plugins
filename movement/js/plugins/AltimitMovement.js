@@ -145,13 +145,28 @@
       var Game_CharacterBase_update = Game_CharacterBase.prototype.update;
       Game_CharacterBase.prototype.update = function() {
         if ( this._moveTarget ) {
-          var dx = this._moveTargetX - this._x;
-          var dy = this._moveTargetY - this._y;
+          var dx, dy;
+          if ( $gameMap.isLoopHorizontal() ) {
+            var dxA = this._moveTargetX - this._x;
+            var dxB = $gameMap.roundX( this._moveTargetX ) - $gameMap.roundX( this._x );
+            dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
+          } else {
+            dx = this._moveTargetX - this._x;
+          }
+          
+          if ( $gameMap.isLoopVertical() ) {
+            var dyA = this._moveTargetY - this._y;
+            var dyB = $gameMap.roundY( this._moveTargetY ) - $gameMap.roundY( this._y );
+            dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
+          } else {
+            dy = this._moveTargetY - this._y;
+          }
+
           var length = Math.sqrt( dx * dx + dy * dy );
           if ( length <= this.stepDistance ) {
             this._moveTarget = false;
-            this._x = this._moveTargetX;
-            this._y = this._moveTargetY;
+            this._x = $gameMap.roundX( this._moveTargetX );
+            this._y = $gameMap.roundY( this._moveTargetY );
           } else {
             dx /= length;
             dy /= length;
