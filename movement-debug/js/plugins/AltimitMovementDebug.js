@@ -165,10 +165,10 @@
           var mapY = $gameMap.adjustY( 0 ) * tileHeight;
           mapX = Math.floor( mapX );
           mapY = Math.floor( mapY );
-          bitmap.drawCollider( mapX + 0.5, mapY + 0.5, $gameMap.collisionMesh() );
-          bitmap.drawCollider( mapX - ( $gameMap.width() * tileWidth ) + 0.5, mapY + 0.5, $gameMap.collisionMesh() );
-          bitmap.drawCollider( mapX + 0.5, mapY - ( $gameMap.height() * tileHeight ) + 0.5, $gameMap.collisionMesh() );
-          bitmap.drawCollider( mapX - ( $gameMap.width() * tileWidth ) + 0.5, mapY - ( $gameMap.height() * tileHeight ) + 0.5, $gameMap.collisionMesh() );
+          bitmap.drawCollider( mapX + 0.5, mapY + 0.5, $gameMap.collisionMesh( $gamePlayer._collisionType ) );
+          bitmap.drawCollider( mapX - ( $gameMap.width() * tileWidth ) + 0.5, mapY + 0.5, $gameMap.collisionMesh( $gamePlayer._collisionType ) );
+          bitmap.drawCollider( mapX + 0.5, mapY - ( $gameMap.height() * tileHeight ) + 0.5, $gameMap.collisionMesh( $gamePlayer._collisionType ) );
+          bitmap.drawCollider( mapX - ( $gameMap.width() * tileWidth ) + 0.5, mapY - ( $gameMap.height() * tileHeight ) + 0.5, $gameMap.collisionMesh( $gamePlayer._collisionType ) );
 
           $gameMap.characters().forEach( function( character ) {
             if ( !character || character._transparent || ( character.isVisible && !character.isVisible() ) ) {

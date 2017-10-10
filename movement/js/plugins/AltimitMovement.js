@@ -334,7 +334,7 @@
             else if ( bboxTests[ii].type == 7 ) { offsetX += $gameMap.width(); offsetY -= $gameMap.height(); }
             else if ( bboxTests[ii].type == 8 ) { offsetX -= $gameMap.width(); offsetY -= $gameMap.height(); }
 
-            var mapColliders = Collider.polygonsWithinColliderList( bboxTests[ii].x + vx, bboxTests[ii].y + vy, bboxTests[ii].aabbox, 0, 0, $gameMap.collisionMesh() );
+            var mapColliders = Collider.polygonsWithinColliderList( bboxTests[ii].x + vx, bboxTests[ii].y + vy, bboxTests[ii].aabbox, 0, 0, $gameMap.collisionMesh( this._collisionType ) );
             if ( mapColliders.length > 0 ) {
                 if ( move.x !== 0 ) {
                   var sigMove = { x: move.x, y: 0 };
@@ -776,19 +776,19 @@
         for ( var ii = 0; ii < bboxTests.length; ii++ ) {
           if ( !!airship && airship._mapId === $gameMap.mapId() == $gameMap.mapId() && Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, airship._x, airship._y, airship.collider().aabbox ) ) {
             this._vehicleType = 'airship';
-            $gameMap.collisionType = CollisionMesh.AIRSHIP;
+            this._collisionType = CollisionMesh.AIRSHIP;
             vehicle = airship;
             break;
           }
           if ( !!ship && ship._mapId === $gameMap.mapId() && Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, ship._x, ship._y, ship.collider().aabbox ) ) {
             this._vehicleType = 'ship';
-            $gameMap.collisionType = CollisionMesh.SHIP;
+            this._collisionType = CollisionMesh.SHIP;
             vehicle = ship;
             break;
           }
           if ( !!boat && boat._mapId === $gameMap.mapId() && Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, boat._x, boat._y, boat.collider().aabbox ) ) {
             this._vehicleType = 'boat';
-            $gameMap.collisionType = CollisionMesh.BOAT;
+            this._collisionType = CollisionMesh.BOAT;
             vehicle = boat;
             break;
           }
@@ -859,7 +859,7 @@
         if ( !this.areFollowersGathering() && this.vehicle().isLowest() ) {
           this._collider = this.vehicle()._passengerCollider;
           this.vehicle()._passengerCollider = undefined;
-          $gameMap.collisionType = CollisionMesh.WALK;
+          this._collisionType = CollisionMesh.WALK;
           this._vehicleGettingOff = false;
           this._vehicleType = 'walk';
           this.setTransparent( false );
@@ -1278,7 +1278,6 @@
         if ( !$gameSystem._eventColliders[mapId] ) {
           $gameSystem._eventColliders[mapId] = [];
         }
-        this.setupCollisionMesh();
       };
 
       Game_Map.prototype.tileId = function( x, y, z ) {
@@ -1296,16 +1295,9 @@
      */
     ( function() {
 
-      Object.defineProperties( Game_Map.prototype, {
-          collisionType: {
-            get: function() { return this._collisionType; },
-            set: function( value ) { this._collisionType = value; },
-            configurable: true
-          }
-      } );
-
-      Game_Map.prototype.collisionMesh = function() {
-        return CollisionMesh.getMesh( this.mapId(), this.collisionType );
+      Game_Map.prototype.collisionMesh = function( collisionType ) {
+        collisionType = collisionType || CollisionMesh.WALK;
+        return CollisionMesh.getMesh( this.mapId(), collisionType );
       }
 
       Game_Map.prototype.getTilesUnder = function( character, vx, vy ) {
@@ -1480,10 +1472,6 @@
           bboxTests.push( { x: character._x + this.width(), y: character._y + this.height(), aabbox: aabbox, type: 8 } );
         }
         return bboxTests;
-      };
-
-      Game_Map.prototype.setupCollisionMesh = function() {
-        this.collisionType = CollisionMesh.WALK;
       };
 
       Game_Map.prototype.characters = function() {
