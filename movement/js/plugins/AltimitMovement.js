@@ -247,16 +247,17 @@
         return !!character
           && character !== this
           && character.isNormalPriority()
+          && this.isNormalPriority()
           && !character.isThrough()
           && !this.isThrough()
-          && character._mapId === $gameMap.mapId()
           && ( !character.isVisible ? true : character.isVisible() )
           && ( !this.vehicle ? true : this.vehicle() !== character )
           && ( !this.followers ? true : !this.followers().contains( character ) )
           && !( this instanceof Game_Follower ? character instanceof Game_Follower : false )
           && !( this instanceof Game_Follower ? character instanceof Game_Player : false )
           && !( this instanceof Game_Vehicle ? character instanceof Game_Player : false )
-          && !( this instanceof Game_Vehicle ? character instanceof Game_Follower : false );
+          && !( this instanceof Game_Vehicle ? character instanceof Game_Follower : false )
+          && ( character instanceof Game_Vehicle ? character._mapId === $gameMap.mapId() : true );
       }
 
       Game_CharacterBase.prototype.moveVector = function( vx, vy ) {
@@ -266,11 +267,11 @@
           move = { x: 0, y: 0 };
 
           var rx = $gameMap.roundX( this._x + vx  );
-          if ( $gameMap.isValid( rx + ( vx < 0 ? aabbox.left : aabbox.right ), this._y ) ) {
+          if ( $gameMap.isValid( $gameMap.roundX( rx + ( vx < 0 ? aabbox.left : aabbox.right ) ), this._y ) ) {
             move.x = vx;
           }
           var ry = $gameMap.roundY( this._y + vy );
-          if ( $gameMap.isValid( this._x, ry + ( vy < 0 ? aabbox.top : aabbox.bottom ) ) ) {
+          if ( $gameMap.isValid( this._x, $gameMap.roundY( ry + ( vy < 0 ? aabbox.top : aabbox.bottom ) ) ) ) {
             move.y = vy;
           }
 
