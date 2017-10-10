@@ -72,10 +72,18 @@
           case 'debug':
             switch ( args[1] ) {
             case 'show':
-              default_display = true;
+              if ( !$gameTemp._vectorDebugVisible && SceneManager._scene instanceof Scene_Map ) {
+                var sceneMap = SceneManager._scene;
+                sceneMap._spriteset.addChild( sceneMap._spriteset._vectorDebugLayer );
+                $gameTemp._vectorDebugVisible = true;
+              }
               break;
             case 'hide':
-              default_display = false;
+              if ( !!$gameTemp._vectorDebugVisible && SceneManager._scene instanceof Scene_Map ) {
+                var sceneMap = SceneManager._scene;
+                sceneMap._spriteset.removeChild( sceneMap._spriteset._vectorDebugLayer );
+                $gameTemp._vectorDebugVisible = false;
+              }
               break;
             }
             break;
@@ -153,7 +161,7 @@
 
         VectorDebugLayer.prototype.update = function() {
           this.bitmap.clearRect( 0, 0, this.bitmap.width, this.bitmap.height );
-          if ( !default_display || !$gameMap.collisionMesh ) {
+          if ( !$gameMap.collisionMesh ) {
             return;
           }
 
@@ -183,7 +191,13 @@
       Spriteset_Map.prototype.createVectorDebugLayer = function() {
         this._vectorDebugLayer = new VectorDebugLayer();
         this._vectorDebugLayer.opacity = 128;
-        this.addChild( this._vectorDebugLayer );
+        if ( default_display && !$gameTemp._vectorDebugVisible ) {
+          $gameTemp._vectorDebugVisible = true;
+          default_display = false;
+        }
+        if ( $gameTemp._vectorDebugVisible ) {
+          this.addChild( this._vectorDebugLayer );
+        }
       };
 
     } )();
