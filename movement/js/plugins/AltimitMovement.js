@@ -70,6 +70,7 @@
      Game_System.prototype.initialize = function() {
        Game_System_initialize.call( this );
        this._eventColliders = [];
+       this._movementRounding = true;
      };
 
    } )();
@@ -78,6 +79,10 @@
      * Extensions
      */
     ( function() {
+
+      Object.defineProperties( Game_System.prototype, {
+        gridMovementRoute: { get: function() { return this._movementRounding; }, set: function( value ) { this._movementRounding = !!value; }, configurable: true },
+      } );
 
       Game_System.prototype.colliderCreateList = function() {
         return Collider.createList();
@@ -289,9 +294,6 @@
           if ( $gameMap.isValid( this._x, $gameMap.roundY( ry + ( vy < 0 ? aabbox.top : aabbox.bottom ) ) ) ) {
             move.y = vy;
           }
-
-          move.x += this._x;
-          move.y += this._y;
         } else {
           var owner = this;
           var collider = owner.collider();
@@ -363,32 +365,31 @@
                 } );
             }
           }
-
-          move.x += this._x;
-          move.y += this._y;
-          // Resolve too much precision
-          move.x = Math.floor( move.x * Collider.PRECISION ) / Collider.PRECISION;
-          move.y = Math.floor( move.y * Collider.PRECISION ) / Collider.PRECISION;
         }
 
-        var dx = move.x - this._x;
-        var dy = move.y - this._y;
-        if ( dx || dy ) {
-          this._x = $gameMap.roundX( move.x );
-          this._y = $gameMap.roundY( move.y );
-          this._realX = this._x - dx;
-          this._realY = this._y - dy;
+        // Resolve too much precision
+        move.x = Math.floor( move.x * Collider.PRECISION ) / Collider.PRECISION;
+        move.y = Math.floor( move.y * Collider.PRECISION ) / Collider.PRECISION;
+
+        if ( move.x || move.y ) {
+          this._x = $gameMap.roundX( this._x + move.x );
+          this._y = $gameMap.roundY( this._y + move.y );
+
+          this._realX = this._x - move.x;
+          this._realY = this._y - move.y;
           this.setMovementSuccess( true );
-          this.setDirectionVector( dx, dy );
+          this.setDirectionVector( move.x, move.y );
           this.increaseSteps();
           this._isMoving = true;
+
+          this.checkEventTriggerTouchFrontVector( move.x, move.y );
         } else {
           this.setMovementSuccess( false );
           this.setDirectionVector( vx, vy );
           this._isMoving = false;
-        }
 
-        this.checkEventTriggerTouchFrontVector( dx, dy );
+          this.checkEventTriggerTouchFrontVector( vx, vy );
+        }
       };
 
       Game_CharacterBase.prototype.setDirectionVector = function( vx, vy ) {
@@ -498,43 +499,43 @@
         switch ( command.code ) {
         case gc.ROUTE_MOVE_DOWN:
           this._moveTarget = true;
-          this._moveTargetX = Math.round( this._x );
-          this._moveTargetY = Math.round( this._y + 1 );
+          this._moveTargetX = ( this._x );
+          this._moveTargetY = ( this._y + 1 );
           break;
         case gc.ROUTE_MOVE_LEFT:
           this._moveTarget = true;
-          this._moveTargetX = Math.round( this._x - 1 );
-          this._moveTargetY = Math.round( this._y );
+          this._moveTargetX = ( this._x - 1 );
+          this._moveTargetY = ( this._y );
           break;
         case gc.ROUTE_MOVE_RIGHT:
           this._moveTarget = true;
-          this._moveTargetX = Math.round( this._x + 1 );
-          this._moveTargetY = Math.round( this._y );
+          this._moveTargetX = ( this._x + 1 );
+          this._moveTargetY = ( this._y );
           break;
         case gc.ROUTE_MOVE_UP:
           this._moveTarget = true;
-          this._moveTargetX = Math.round( this._x );
-          this._moveTargetY = Math.round( this._y - 1 );
+          this._moveTargetX = ( this._x );
+          this._moveTargetY = ( this._y - 1 );
           break;
         case gc.ROUTE_MOVE_LOWER_L:
           this._moveTarget = true;
-          this._moveTargetX = Math.round( this._x - 1 );
-          this._moveTargetY = Math.round( this._y + 1 );
+          this._moveTargetX = ( this._x - 1 );
+          this._moveTargetY = ( this._y + 1 );
           break;
         case gc.ROUTE_MOVE_LOWER_R:
           this._moveTarget = true;
-          this._moveTargetX = Math.round( this._x + 1 );
-          this._moveTargetY = Math.round( this._y + 1 );
+          this._moveTargetX = ( this._x + 1 );
+          this._moveTargetY = ( this._y + 1 );
           break;
         case gc.ROUTE_MOVE_UPPER_L:
           this._moveTarget = true;
-          this._moveTargetX = Math.round( this._x - 1 );
-          this._moveTargetY = Math.round( this._y - 1 );
+          this._moveTargetX = ( this._x - 1 );
+          this._moveTargetY = ( this._y - 1 );
           break;
         case gc.ROUTE_MOVE_UPPER_R:
           this._moveTarget = true;
-          this._moveTargetX = Math.round( this._x + 1 );
-          this._moveTargetY = Math.round( this._y - 1 );
+          this._moveTargetX = ( this._x + 1 );
+          this._moveTargetY = ( this._y - 1 );
           break;
         case gc.ROUTE_MOVE_FORWARD:
           this._willUnfixDirection = this.isDirectionFixed();
@@ -542,8 +543,8 @@
           var vx = Direction.isLeft( this._direction ) ? -1 : ( Direction.isRight( this._direction ) ? 1 : 0 );
           var vy = Direction.isUp( this._direction ) ? -1 : ( Direction.isDown( this._direction ) ? 1 : 0 );
           this._moveTarget = true;
-          this._moveTargetX = Math.round( this._x + vx );
-          this._moveTargetY = Math.round( this._y + vy );
+          this._moveTargetX = ( this._x + vx );
+          this._moveTargetY = ( this._y + vy );
           break;
         case gc.ROUTE_MOVE_BACKWARD:
           this._willUnfixDirection = this.isDirectionFixed();
@@ -551,12 +552,16 @@
           var vx = Direction.isLeft( this._direction ) ? -1 : ( Direction.isRight( this._direction ) ? 1 : 0 );
           var vy = Direction.isUp( this._direction ) ? -1 : ( Direction.isDown( this._direction ) ? 1 : 0 );
           this._moveTarget = true;
-          this._moveTargetX = Math.round( this._x - vx );
-          this._moveTargetY = Math.round( this._y - vy );
+          this._moveTargetX = ( this._x - vx );
+          this._moveTargetY = ( this._y - vy );
           break;
         default:
           Game_Character_processMoveCommand.call( this, command );
           break;
+        }
+        if ( this._moveTarget && $gameSystem._movementRounding ) {
+          this._moveTargetX = Math.round( this._moveTargetX );
+          this._moveTargetY = Math.round( this._moveTargetY );
         }
       };
 
@@ -667,7 +672,7 @@
               events[ii].start();
             } else if ( events[ii]._trigger === 2 ) {
               // Event touch is encasing
-              if ( Collider.encase( this._x, this._y, collider, entryX, entryY, events[ii].collider() ) || Collider.encase( entryX, entryY, events[ii].collider(), this._x, this._y, collider ) ) {
+              if ( Collider.encase( entryX, entryY, events[ii].collider(), this._x, this._y, collider ) || Collider.encase( this._x, this._y, collider, entryX, entryY, events[ii].collider() ) ) {
                 events[ii].start();
               }
             } else if ( Collider.intersect( this._x, this._y, collider, entryX, entryY, events[ii].collider() ) ) {
@@ -1722,7 +1727,8 @@
     Collider.CIRCLE = 0;
     Collider.POLYGON = 1;
     Collider.LIST = 2;
-    Collider.PRECISION = 1024;
+    Collider.PRECISION = Math.pow( 2, 16 );
+    Collider.I_PRECISION = 1 / Collider.PRECISION;
 
     Collider.createList = function() {
       return { type: Collider.LIST, colliders: [], aabbox: { left: Number.POSITIVE_INFINITY, top: Number.POSITIVE_INFINITY, right: Number.NEGATIVE_INFINITY, bottom: Number.NEGATIVE_INFINITY } };
@@ -1903,6 +1909,7 @@
     };
 
     Collider.encaseCirclePolygon = function( ax, ay, ac, bx, by, bc ) {
+      var aradius = ac.radius + Collider.I_PRECISION;
       ax = ax + ac.x;
       ay = ay + ac.y;
 
@@ -1928,9 +1935,9 @@
       planeY /= length;
 
       // Project circle
-      var minA = planeX * ( ax ) + planeY * ( ay );
-      var maxA = minA + ac.radius;
-      minA -= ac.radius;
+      var point = planeX * ( ax ) + planeY * ( ay );
+      var maxA = point + aradius;
+      var minA = point - aradius;
 
       // Project polygon
       var minB = Number.POSITIVE_INFINITY;
@@ -1959,9 +1966,9 @@
         planeY /= length;
 
         // Project circle
-        var minA = planeX * ( ax ) + planeY * ( ay );
-        var maxA = minA + ac.radius;
-        minA -= ac.radius;
+        var point = planeX * ( ax ) + planeY * ( ay );
+        var maxA = point + aradius;
+        var minA = point - aradius;
 
         // Project polygon
         var minB = Number.POSITIVE_INFINITY;
@@ -1981,6 +1988,7 @@
     };
 
     Collider.intersectCirclePolygon = function( ax, ay, ac, bx, by, bc ) {
+      var aradius = ac.radius;
       ax = ax + ac.x;
       ay = ay + ac.y;
 
@@ -2006,9 +2014,9 @@
       planeY /= length;
 
       // Project circle
-      var minA = planeX * ( ax ) + planeY * ( ay );
-      var maxA = minA + ac.radius;
-      minA -= ac.radius;
+      var point = planeX * ( ax ) + planeY * ( ay );
+      var maxA = point + aradius;
+      var minA = point - aradius;
 
       // Project polygon
       var minB = Number.POSITIVE_INFINITY;
@@ -2038,9 +2046,9 @@
         planeY /= length;
 
         // Project circle
-        var minA = planeX * ( ax ) + planeY * ( ay );
-        var maxA = minA + ac.radius;
-        minA -= ac.radius;
+        var point = planeX * ( ax ) + planeY * ( ay );
+        var maxA = point + aradius;
+        var minA = point - aradius;
 
         // Project polygon
         var minB = Number.POSITIVE_INFINITY;
@@ -2051,7 +2059,7 @@
             if ( projection > maxB ) maxB = projection;
         }
 
-        if ( minA >= maxB || maxA <= minB ) {
+        if ( minA > maxB || maxA < minB ) {
           // No collision
           return false;
         }
@@ -2061,6 +2069,7 @@
     };
 
     Collider.moveCirclePolygon = function( ax, ay, ac, bx, by, bc, vector ) {
+      var aradius = ac.radius;
       ax = ax + ac.x;
       ay = ay + ac.y;
 
@@ -2091,9 +2100,9 @@
       planeY /= length;
 
       // Project circle
-      var minA = planeX * ( ax + vector.x ) + planeY * ( ay + vector.y );
-      var maxA = minA + ac.radius;
-      minA -= ac.radius;
+      var point = planeX * ( ax + vector.x ) + planeY * ( ay + vector.y );
+      var maxA = point + aradius;
+      var minA = point - aradius;
 
       // Project polygon
       var minB = Number.POSITIVE_INFINITY;
@@ -2104,7 +2113,7 @@
           if ( projection > maxB ) maxB = projection;
       }
 
-      if ( minA >= maxB || maxA <= minB ) {
+      if ( minA > maxB || maxA < minB ) {
         // No collision
         return vector;
       }
@@ -2128,9 +2137,9 @@
         planeY /= length;
 
         // Project circle
-        var minA = planeX * ( ax + vector.x ) + planeY * ( ay + vector.y );
-        var maxA = minA + ac.radius;
-        minA -= ac.radius;
+        var point = planeX * ( ax + vector.x ) + planeY * ( ay + vector.y );
+        var maxA = point + aradius;
+        var minA = point - aradius;
 
         // Project polygon
         var minB = Number.POSITIVE_INFINITY;
@@ -2141,7 +2150,7 @@
             if ( projection > maxB ) maxB = projection;
         }
 
-        if ( minA >= maxB || maxA <= minB ) {
+        if ( minA > maxB || maxA < minB ) {
           // No collision
           return vector;
         }
@@ -2163,6 +2172,7 @@
     };
 
     Collider.encasePolygonCircle = function( bx, by, bc, ax, ay, ac ) {
+      var aradius = ac.radius - Collider.I_PRECISION;
       ax = ax + ac.x;
       ay = ay + ac.y;
 
@@ -2188,9 +2198,9 @@
       planeY /= length;
 
       // Project circle
-      var minA = planeX * ( ax ) + planeY * ( ay );
-      var maxA = minA + ac.radius;
-      minA -= ac.radius;
+      var point = planeX * ( ax ) + planeY * ( ay );
+      var maxA = point + aradius;
+      var minA = point - aradius;
 
       // Project polygon
       var minB = Number.POSITIVE_INFINITY;
@@ -2219,9 +2229,9 @@
         planeY /= length;
 
         // Project circle
-        var minA = planeX * ( ax ) + planeY * ( ay );
-        var maxA = minA + ac.radius;
-        minA -= ac.radius;
+        var point = planeX * ( ax ) + planeY * ( ay );
+        var maxA = point + aradius;
+        var minA = point - aradius;
 
         // Project polygon
         var minB = Number.POSITIVE_INFINITY;
@@ -2332,7 +2342,7 @@
               if ( projection > maxB ) maxB = projection;
           }
 
-          if ( minA >= maxB || maxA <= minB ) {
+          if ( minA > maxB || maxA < minB ) {
             // No collision
             return false;
           }
@@ -2381,7 +2391,7 @@
               if ( projection > maxB ) maxB = projection;
           }
 
-          if ( minA >= maxB || maxA <= minB ) {
+          if ( minA > maxB || maxA < minB ) {
             // No collision
             return vector;
           }
