@@ -49,7 +49,7 @@
  *  Plugin will automatically apply when ON.
  *
  * About:
- *  Version 0.01 Alpha
+ *  Version 0.02 Alpha
  *  Website https://github.com/AltimitSystems/mv-plugins/tree/master/movement
  */
 ( function() {
@@ -153,16 +153,20 @@
           var dx, dy;
           if ( $gameMap.isLoopHorizontal() ) {
             var dxA = this._moveTargetX - this._x;
-            var dxB = $gameMap.roundX( this._moveTargetX ) - this._x;
+            var dxB = ( this._moveTargetX - $gameMap.width() ) - this._x;
+            var dxC = ( this._moveTargetX + $gameMap.width() ) - this._x;
             dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
+            dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
           } else {
             dx = this._moveTargetX - this._x;
           }
 
           if ( $gameMap.isLoopVertical() ) {
             var dyA = this._moveTargetY - this._y;
-            var dyB = $gameMap.roundY( this._moveTargetY ) - this._y;
+            var dyB = ( this._moveTargetY - $gameMap.height() ) - this._y;
+            var dyC = ( this._moveTargetY + $gameMap.height() ) - this._y;
             dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
+            dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
           } else {
             dy = this._moveTargetY - this._y;
           }
@@ -589,7 +593,7 @@
 
       var Game_Player_encounterProgressValue = Game_Player.prototype.encounterProgressValue;
       Game_Player.prototype.encounterProgressValue = function() {
-        return Game_Player_encounterProgressValue.call( this ) * this.stepDistance;
+        return this.stepDistance * Game_Player_encounterProgressValue.call( this );
       };
 
       var Game_Player_clearTransferInfo = Game_Player.prototype.clearTransferInfo;
@@ -619,8 +623,96 @@
         return Input.dir8;
       };
 
-      Game_Player.prototype.findDirectionTo = function( goalX, goalY ) {
-        return false;
+      Game_Player.prototype.moveByInput = function() {
+        if ( this._moveTarget ) {
+          this._touchTarget = false;
+        }
+
+        if ( !this.isMoving() && this.canMove() ) {
+          var touchNow = false;
+          var direction = this.getInputDirection();
+          if ( direction > 0 ) {
+            this.executeMove( direction );
+            this._touchTarget = false;
+          } else if ( $gameTemp.isDestinationValid() ) {
+            var aabbox = this.collider().aabbox;
+            this._touchTargetX = $gameTemp.destinationX() - ( aabbox.left + aabbox.right ) / 2;
+            this._touchTargetY = $gameTemp.destinationY() - ( aabbox.top + aabbox.bottom ) / 2
+            this._touchTarget = true;
+            $gameTemp.clearDestination();
+            touchNow = true;
+          }
+
+          if ( this._touchTarget ) {
+            var dx, dy;
+            if ( $gameMap.isLoopHorizontal() ) {
+              var dxA = this._touchTargetX - this._x;
+              var dxB = ( this._touchTargetX - $gameMap.width() ) - this._x;
+              var dxC = ( this._touchTargetX + $gameMap.width() ) - this._x;
+              dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
+              dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
+            } else {
+              dx = this._touchTargetX - this._x;
+            }
+
+            if ( $gameMap.isLoopVertical() ) {
+              var dyA = this._touchTargetY - this._y;
+              var dyB = ( this._touchTargetY - $gameMap.height() ) - this._y;
+              var dyC = ( this._touchTargetY + $gameMap.height() ) - this._y;
+              dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
+              dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
+            } else {
+              dy = this._touchTargetY - this._y;
+            }
+
+            var length = Math.sqrt( dx * dx + dy * dy );
+            if ( length <= this.stepDistance ) {
+              this._touchTarget = false;
+            } else {
+              dx /= length;
+              dy /= length;
+              this.moveVector( dx * this.stepDistance, dy * this.stepDistance );
+              if ( Math.abs( dx ) > Math.abs( dy ) ) {
+                this.setDirectionVector( dx, 0 );
+              } else {
+                this.setDirectionVector( 0, dy );
+              }
+              this._touchTarget = this.isMovementSucceeded();
+            }
+
+            if ( !this._touchTarget ) {
+              if ( touchNow && this.isInVehicle() ) {
+                this.getOffVehicle();
+              } else {
+                this.getOnVehicle();
+              }
+
+              if ( !this._vehicleGettingOn ) {
+                var characters = $gameMap.getCharactersUnder( $gamePlayer, this._x, this._y ).filter( function( character ) {
+                  return character._trigger === 0;
+                } );
+
+                if ( characters.length > 0 ) {
+                  var closest;
+                  var dist = Number.POSITIVE_INFINITY;
+                  for ( var ii = 0; ii < characters.length; ii++ ) {
+                    var entryX = characters[ii]._x;
+                    var entryY = characters[ii]._y;
+
+                    var dx = this._x - entryX;
+                    var dy = this._y - entryY;
+                    var td = ( dx * dx + dy * dy );
+                    if ( td < dist ) {
+                      dist = td;
+                      closest = characters[ii];
+                    }
+                  }
+                  closest.start();
+                }
+              }
+            }
+          }
+        }
       };
 
       Game_Player.prototype.checkEventTriggerHere = function( triggers ) {
@@ -1255,32 +1347,25 @@
 
   } )();
 
-  // /**
-  //  * Game_Interpreter
-  //  */
-  // ( function() {
-  //
-  //   /**
-  //    * Overrides
-  //    */
-  //   ( function() {
-  //
-  //     // Set Movement Route
-  //     Game_Interpreter.prototype.command205 = function() {
-  //       $gameMap.refreshIfNeeded();
-  //       this._character = this.character( this._params[0] );
-  //       if ( this._character ) {
-  //         this._character.forceMoveRoute( this._params[1] );
-  //         if ( this._params[1].wait ) {
-  //           this.setWaitMode( 'route' );
-  //         }
-  //       }
-  //       return true;
-  //     };
-  //
-  //   } )();
-  //
-  // } )();
+  /**
+   * Game_Interpreter
+   */
+  ( function() {
+
+    /**
+     * Overrides
+     */
+    ( function() {
+
+      var Game_Interpreter_command101 = Game_Interpreter.prototype.command101;
+      Game_Interpreter.prototype.command101 = function() {
+        Game_Interpreter_command101.call( this );
+        $gamePlayer._touchTarget = false;
+      };
+
+    } )();
+
+  } )();
 
   /**
    * Game_Map
@@ -1333,6 +1418,47 @@
         collisionType = collisionType || CollisionMesh.WALK;
         return CollisionMesh.getMesh( this.mapId(), collisionType );
       }
+
+      Game_Map.prototype.getCharactersUnder = function( character, x, y ) {
+        var vx = x - character.x;
+        var vy = y - character.y;
+
+        var collider = character.collider();
+        var bboxTests = this.getAABBoxTests( character, vx, vy );
+
+        // Gather any solid characters within the movement bounding box
+        var loopMap = {};
+        var characters = $gameMap.characters().filter( function( entry ) {
+          if ( !entry ) {
+            return false;
+          }
+          for ( var ii = 0; ii < bboxTests.length; ii++ ) {
+            if ( Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, entry._x, entry._y, entry.collider().aabbox ) ) {
+              loopMap[entry] = bboxTests[ii].type;
+              return true;
+            }
+          }
+          return false;
+        } );
+
+        characters = characters.filter( function( character ) {
+          var entryX = character._x;
+          var entryY = character._y;
+
+          if ( loopMap[character] == 1 ) { entryX += $gameMap.width(); }
+          else if ( loopMap[character] == 2 ) { entryX -= $gameMap.width(); }
+          else if ( loopMap[character] == 3 ) { entryY += $gameMap.height(); }
+          else if ( loopMap[character] == 4 ) { entryY -= $gameMap.height(); }
+          else if ( loopMap[character] == 5 ) { entryX += $gameMap.width(); entryY += $gameMap.height(); }
+          else if ( loopMap[character] == 6 ) { entryX -= $gameMap.width(); entryY += $gameMap.height(); }
+          else if ( loopMap[character] == 7 ) { entryX += $gameMap.width(); entryY -= $gameMap.height(); }
+          else if ( loopMap[character] == 8 ) { entryX -= $gameMap.width(); entryY -= $gameMap.height(); }
+
+          return Collider.intersect( x, y, collider, entryX, entryY, character.collider() );
+        } );
+
+        return characters;
+      };
 
       Game_Map.prototype.getTilesUnder = function( character, vx, vy ) {
         vx = vx || 0;
@@ -1510,6 +1636,51 @@
 
       Game_Map.prototype.characters = function() {
         return this._events.concat( $gamePlayer, this._vehicles, $gamePlayer._followers._data );
+      };
+
+    } )();
+
+  } )();
+
+  /**
+   * Spriteset_Map
+   */
+  ( function() {
+
+    /**
+     * Overrides
+     */
+    ( function() {
+
+      Sprite_Destination.prototype.createBitmap = function() {
+        var tileWidth = $gameMap.tileWidth();
+        var tileHeight = $gameMap.tileHeight();
+        this.bitmap = new Bitmap( tileWidth, tileHeight );
+        this.bitmap.drawCircle( tileWidth / 2, tileHeight / 2, ( tileWidth < tileHeight ? tileWidth : tileHeight ) / 2, 'white' );
+        this.anchor.x = 0.5;
+        this.anchor.y = 0.5;
+        this.blendMode = Graphics.BLEND_ADD;
+      };
+
+      Sprite_Destination.prototype.update = function() {
+        Sprite.prototype.update.call( this );
+        if ( $gamePlayer._touchTarget ){
+          this.updatePosition();
+          this.updateAnimation();
+          this.visible = true;
+        } else {
+          this._frameCount = 0;
+          this.visible = false;
+        }
+      };
+
+      Sprite_Destination.prototype.updatePosition = function() {
+        var tileWidth = $gameMap.tileWidth();
+        var tileHeight = $gameMap.tileHeight();
+        var x = $gamePlayer._touchTargetX;
+        var y = $gamePlayer._touchTargetY;
+        this.x = ( $gameMap.adjustX( x ) + 0.5 ) * tileWidth;
+        this.y = ( $gameMap.adjustY( y ) + 0.5 ) * tileHeight;
       };
 
     } )();
