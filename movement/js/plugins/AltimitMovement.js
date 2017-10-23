@@ -911,9 +911,28 @@
           vehicle._passengerCollider = this.collider();
           this._collider = vehicle.collider();
 
-          var vx = vehicle._x - this._x;
-          var vy = vehicle._y - this._y;
-          this.moveVector( vx, vy );
+          var dx, dy;
+          if ( $gameMap.isLoopHorizontal() ) {
+            var dxA = vehicle._x - this._x;
+            var dxB = ( vehicle._x - $gameMap.width() ) - this._x;
+            var dxC = ( vehicle._x + $gameMap.width() ) - this._x;
+            dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
+            dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
+          } else {
+            dx = vehicle._x - this._x;
+          }
+
+          if ( $gameMap.isLoopVertical() ) {
+            var dyA = vehicle._y - this._y;
+            var dyB = ( vehicle._y - $gameMap.height() ) - this._y;
+            var dyC = ( vehicle._y + $gameMap.height() ) - this._y;
+            dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
+            dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
+          } else {
+            dy = vehicle._y - this._y;
+          }
+
+          this.moveVector( dx, dy );
           this.gatherFollowers();
         }
 
@@ -1038,8 +1057,27 @@
         var characterCenterX = character.x + characterBox.left + characterWidth / 2;
         var characterCenterY = character.y + characterBox.top + characterHeight / 2;
 
-        var dx = characterCenterX - myCenterX;
-        var dy = characterCenterY - myCenterY;
+        var dx, dy;
+        if ( $gameMap.isLoopHorizontal() ) {
+          var dxA = characterCenterX - myCenterX;
+          var dxB = ( characterCenterX - $gameMap.width() ) - myCenterX;
+          var dxC = ( characterCenterX + $gameMap.width() ) - myCenterX;
+          dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
+          dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
+        } else {
+          dx = characterCenterX - myCenterX;
+        }
+
+        if ( $gameMap.isLoopVertical() ) {
+          var dyA = characterCenterY - myCenterY;
+          var dyB = ( characterCenterY - $gameMap.height() ) - myCenterY;
+          var dyC = ( characterCenterY + $gameMap.height() ) - myCenterY;
+          dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
+          dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
+        } else {
+          dy = characterCenterY - myCenterY;
+        }
+
         var distance = Math.sqrt( dx * dx + dy * dy );
         if ( distance > screenRadius ) {
           dx /= distance;
@@ -1095,8 +1133,28 @@
             var visibleFollowers = this.visibleFollowers();
             for ( var ii = 0; ii < visibleFollowers.length; ii++ ) {
               var follower = visibleFollowers[ii];
-              var dx = this._targetX - follower._x;
-              var dy = this._targetY - follower._y;
+
+              var dx, dy;
+              if ( $gameMap.isLoopHorizontal() ) {
+                var dxA = this._targetX - follower._x;
+                var dxB = ( this._targetX - $gameMap.width() ) - follower._x;
+                var dxC = ( this._targetX + $gameMap.width() ) - follower._x;
+                dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
+                dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
+              } else {
+                dx = this._targetX - follower._x;
+              }
+
+              if ( $gameMap.isLoopVertical() ) {
+                var dyA = this._targetY - follower._y;
+                var dyB = ( this._targetY - $gameMap.height() ) - follower._y;
+                var dyC = ( this._targetY + $gameMap.height() ) - follower._y;
+                dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
+                dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
+              } else {
+                dy = this._targetY - follower._y;
+              }
+
               var distance = Math.sqrt( dx * dx + dy * dy );
               dx /= distance;
               dy /= distance;
@@ -1131,8 +1189,28 @@
         var visibleFollowers = this.visibleFollowers();
         for ( var ii = 0; ii < visibleFollowers.length; ii++ ) {
           var follower = visibleFollowers[ii];
-          var dx = this._targetX - follower._realX;
-          var dy = this._targetY - follower._realY;
+
+          var dx, dy;
+          if ( $gameMap.isLoopHorizontal() ) {
+            var dxA = this._targetX - follower._realX;
+            var dxB = ( this._targetX - $gameMap.width() ) - follower._realX;
+            var dxC = ( this._targetX + $gameMap.width() ) - follower._realX;
+            dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
+            dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
+          } else {
+            dx = this._targetX - follower._realX;
+          }
+
+          if ( $gameMap.isLoopVertical() ) {
+            var dyA = this._targetY - follower._realY;
+            var dyB = ( this._targetY - $gameMap.height() ) - follower._realY;
+            var dyC = ( this._targetY + $gameMap.height() ) - follower._realY;
+            dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
+            dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
+          } else {
+            dy = this._targetY - follower._realY;
+          }
+
           var distance = Math.sqrt( dx * dx + dy * dy );
           if ( distance > screenRadius ) {
             // Don't count if off screen
