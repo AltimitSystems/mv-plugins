@@ -190,6 +190,22 @@
         Game_CharacterBase_update.call( this );
       };
 
+      Game_CharacterBase.prototype.isOnLadder = function() {
+        var aabbox = this.collider().aabbox;
+        if ( aabbox.right - aabbox.left > 1 ) {
+          // Ladders must be 1-tile wide
+          return false;
+        }
+        // If middle is on ladder
+        if ( $gameMap.isLadder( $gameMap.roundX( this._x + ( aabbox.left + aabbox.right ) / 2 ), $gameMap.roundY( this._y + ( aabbox.top + aabbox.bottom ) / 2 ) ) ) {
+          // If bottom middle is on ladder
+          if ( $gameMap.isLadder( $gameMap.roundX( this._x + ( aabbox.left + aabbox.right ) / 2 ), $gameMap.roundY( this._y + aabbox.bottom ) ) ) {
+            return true;
+          }
+        }
+        return false;
+      };
+
       Game_CharacterBase.prototype.moveStraight = function( d ) {
         var vy = Direction.isUp( d ) ? -this.stepDistance : ( Direction.isDown( d ) ? this.stepDistance : 0 );
         var vx = Direction.isLeft( d ) ? -this.stepDistance : ( Direction.isRight( d ) ? this.stepDistance : 0 );
@@ -374,6 +390,16 @@
         // Resolve too much precision
         move.x = Math.floor( move.x * Collider.PRECISION ) / Collider.PRECISION;
         move.y = Math.floor( move.y * Collider.PRECISION ) / Collider.PRECISION;
+
+        // Special ladder behaviour
+        if ( this.isOnLadder() ) {
+          var tileX = Math.round( this._x );
+          if ( !$gameMap.isPassable( tileX, this._y + move.y, Direction.LEFT ) ) {
+            if ( !$gameMap.isPassable( tileX, this._y + move.y, Direction.RIGHT ) ) {
+              move.x = tileX - this._x;
+            }
+          }
+        }
 
         if ( move.x || move.y ) {
           this._x = $gameMap.roundX( this._x + move.x );
@@ -1104,12 +1130,16 @@
           this.setThrough( true );
         }
 
-        var adx = Math.abs( dx );
-        var ady = Math.abs( dy );
-        if ( adx > ady ) {
-          this.setDirectionVector( dx, 0 );
-        } else if ( ady > adx ) {
-          this.setDirectionVector( 0, dy );
+        if ( this.isOnLadder() ) {
+          this.setDirection(8);
+        } else {
+          var adx = Math.abs( dx );
+          var ady = Math.abs( dy );
+          if ( adx > ady ) {
+            this.setDirectionVector( dx, 0 );
+          } else if ( ady > adx ) {
+            this.setDirectionVector( 0, dy );
+          }
         }
       };
 
