@@ -2006,7 +2006,7 @@
     Collider.CIRCLE = 0;
     Collider.POLYGON = 1;
     Collider.LIST = 2;
-    Collider.PRECISION = Math.pow( 2, 8 );
+    Collider.PRECISION = Math.pow( 2, 7 );
     Collider.I_PRECISION = 1 / Collider.PRECISION;
 
     Collider.createList = function() {
