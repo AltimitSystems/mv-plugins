@@ -1,3 +1,7 @@
+## Copyright
+
+Copyright is held under the name "Altimit Community Contributors". Altimit Community Contributors includes Altimit Systems LTD and all accepted Pull requests to the **AltimitSystems/mv-plugins/master** branch.
+
 ## Pull requests
 
 To make the review process simple and to help with understanding the nature of your changes please adhere to the following guidelines:
