@@ -645,18 +645,20 @@
             this._touchTargetX = $gameTemp.destinationX() - ( aabbox.left + aabbox.right ) / 2;
             this._touchTargetY = $gameTemp.destinationY() - ( aabbox.top + aabbox.bottom ) / 2
             this._touchTarget = true;
-            $gameTemp.clearDestination();
 
             if ( this.isInVehicle() ) {
-              // Check if we clicked on our player character
-              if ( this._touchTargetX >= $gamePlayer._x + aabbox.left && this._touchTargetX <= $gamePlayer._x + aabbox.right ) {
-                if ( this._touchTargetY >= $gamePlayer._y + aabbox.top && this._touchTargetY <= $gamePlayer._y + aabbox.bottom ) {
+              // Check if we clicked on our vehicle character
+              var vehicle = $gamePlayer.vehicle();
+              if ( $gameTemp.destinationX() >= vehicle._x + aabbox.left && $gameTemp.destinationX() <= vehicle._x + aabbox.right ) {
+                if ( $gameTemp.destinationY() >= vehicle._y + aabbox.top && $gameTemp.destinationY() <= vehicle._y + aabbox.bottom ) {
                   this.getOffVehicle();
                   this._touchTarget = false;
                   return;
                 }
               }
             }
+
+            $gameTemp.clearDestination();
           }
 
           if ( this._touchTarget ) {
