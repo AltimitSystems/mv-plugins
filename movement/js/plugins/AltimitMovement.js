@@ -685,26 +685,28 @@
                 return;
               }
 
-              var characters = $gameMap.getCharactersUnder( $gamePlayer, this._x, this._y ).filter( function( character ) {
-                return character._trigger === 0;
-              } );
+              if ( this.canStartLocalEvents() ) {
+                var characters = $gameMap.getCharactersUnder( $gamePlayer, this._x, this._y ).filter( function( character ) {
+                  return character._trigger === 0;
+                } );
 
-              if ( characters.length > 0 ) {
-                var closest;
-                var dist = Number.POSITIVE_INFINITY;
-                for ( var ii = 0; ii < characters.length; ii++ ) {
-                  var entryX = characters[ii]._x;
-                  var entryY = characters[ii]._y;
+                if ( characters.length > 0 ) {
+                  var closest;
+                  var dist = Number.POSITIVE_INFINITY;
+                  for ( var ii = 0; ii < characters.length; ii++ ) {
+                    var entryX = characters[ii]._x;
+                    var entryY = characters[ii]._y;
 
-                  var dx = this._x - entryX;
-                  var dy = this._y - entryY;
-                  var td = ( dx * dx + dy * dy );
-                  if ( td < dist ) {
-                    dist = td;
-                    closest = characters[ii];
+                    var dx = this._x - entryX;
+                    var dy = this._y - entryY;
+                    var td = ( dx * dx + dy * dy );
+                    if ( td < dist ) {
+                      dist = td;
+                      closest = characters[ii];
+                    }
                   }
+                  closest.start();
                 }
-                closest.start();
               }
             }
           }
