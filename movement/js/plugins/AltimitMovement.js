@@ -373,7 +373,7 @@
         move.y = Math.floor( move.y * Collider.PRECISION ) / Collider.PRECISION;
 
         // Special ladder behaviour
-        if ( this.isOnLadder() ) {
+        if ( this.isOnLadder() && ( this.isInAirship && !this.isInAirship() ) ) {
           var tileX = Math.round( this._x );
           if ( !$gameMap.isPassable( tileX, this._y + move.y, Direction.LEFT ) ) {
             if ( !$gameMap.isPassable( tileX, this._y + move.y, Direction.RIGHT ) ) {
@@ -642,9 +642,6 @@
             this._touchTarget = false;
           } else if ( $gameTemp.isDestinationValid() ) {
             var aabbox = this.collider().aabbox;
-            this._touchTargetX = $gameTemp.destinationX() - ( aabbox.left + aabbox.right ) / 2;
-            this._touchTargetY = $gameTemp.destinationY() - ( aabbox.top + aabbox.bottom ) / 2
-            this._touchTarget = true;
 
             if ( this.isInVehicle() ) {
               // Check if we clicked on our vehicle character
@@ -658,6 +655,9 @@
               }
             }
 
+            this._touchTargetX = $gameTemp.destinationX() - ( aabbox.left + aabbox.right ) / 2;
+            this._touchTargetY = $gameTemp.destinationY() - ( aabbox.top + aabbox.bottom ) / 2
+            this._touchTarget = true;
             $gameTemp.clearDestination();
           }
 
