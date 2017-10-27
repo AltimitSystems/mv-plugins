@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2017 Altimit Systems LTD
+ * Copyright (c) 2017 Altimit Community Contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@
 
 /*:
  * @plugindesc Vector-based character movement and collision
- * @author Altimit Systems LTD
+ * @author Altimit Community Contributors
  *
  * @param play_test
  * @text Play-test
@@ -54,7 +54,7 @@
  */
 ( function() {
 
-  var COLLISION_MESH_CACHING = PluginManager.parameters( 'AltimitMovement' )['collision_mesh_caching'] !== 'false';
+  var COLLISION_MESH_CACHING = Boolean( PluginManager.parameters( 'AltimitMovement' )['collision_mesh_caching'] );
 
   /**
    * Game_System
@@ -150,27 +150,8 @@
       var Game_CharacterBase_update = Game_CharacterBase.prototype.update;
       Game_CharacterBase.prototype.update = function() {
         if ( this._moveTarget ) {
-          var dx, dy;
-          if ( $gameMap.isLoopHorizontal() ) {
-            var dxA = this._moveTargetX - this._x;
-            var dxB = ( this._moveTargetX - $gameMap.width() ) - this._x;
-            var dxC = ( this._moveTargetX + $gameMap.width() ) - this._x;
-            dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
-            dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
-          } else {
-            dx = this._moveTargetX - this._x;
-          }
-
-          if ( $gameMap.isLoopVertical() ) {
-            var dyA = this._moveTargetY - this._y;
-            var dyB = ( this._moveTargetY - $gameMap.height() ) - this._y;
-            var dyC = ( this._moveTargetY + $gameMap.height() ) - this._y;
-            dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
-            dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
-          } else {
-            dy = this._moveTargetY - this._y;
-          }
-
+          var dx = $gameMap.directionX( this._x, this._moveTargetX );
+          var dy = $gameMap.directionY( this._y, this._moveTargetY );
           var length = Math.sqrt( dx * dx + dy * dy );
           if ( length <= this.stepDistance ) {
             this._moveTarget = false;
@@ -655,7 +636,6 @@
         }
 
         if ( !this.isMoving() && this.canMove() ) {
-          var touchNow = false;
           var direction = this.getInputDirection();
           if ( direction > 0 ) {
             this.executeMove( direction );
@@ -666,31 +646,22 @@
             this._touchTargetY = $gameTemp.destinationY() - ( aabbox.top + aabbox.bottom ) / 2
             this._touchTarget = true;
             $gameTemp.clearDestination();
-            touchNow = true;
+
+            if ( this.isInVehicle() ) {
+              // Check if we clicked on our player character
+              if ( this._touchTargetX >= $gamePlayer._x + aabbox.left && this._touchTargetX <= $gamePlayer._x + aabbox.right ) {
+                if ( this._touchTargetY >= $gamePlayer._y + aabbox.top && this._touchTargetY <= $gamePlayer._y + aabbox.bottom ) {
+                  this.getOffVehicle();
+                  this._touchTarget = false;
+                  return;
+                }
+              }
+            }
           }
 
           if ( this._touchTarget ) {
-            var dx, dy;
-            if ( $gameMap.isLoopHorizontal() ) {
-              var dxA = this._touchTargetX - this._x;
-              var dxB = ( this._touchTargetX - $gameMap.width() ) - this._x;
-              var dxC = ( this._touchTargetX + $gameMap.width() ) - this._x;
-              dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
-              dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
-            } else {
-              dx = this._touchTargetX - this._x;
-            }
-
-            if ( $gameMap.isLoopVertical() ) {
-              var dyA = this._touchTargetY - this._y;
-              var dyB = ( this._touchTargetY - $gameMap.height() ) - this._y;
-              var dyC = ( this._touchTargetY + $gameMap.height() ) - this._y;
-              dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
-              dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
-            } else {
-              dy = this._touchTargetY - this._y;
-            }
-
+            var dx = $gameMap.directionX( this._x, this._touchTargetX );
+            var dy = $gameMap.directionY( this._y, this._touchTargetY );
             var length = Math.sqrt( dx * dx + dy * dy );
             if ( length <= this.stepDistance ) {
               this._touchTarget = false;
@@ -707,34 +678,31 @@
             }
 
             if ( !this._touchTarget ) {
-              if ( touchNow && this.isInVehicle() ) {
-                this.getOffVehicle();
-              } else {
+              if ( !this.isInVehicle() ) {
                 this.getOnVehicle();
+                return;
               }
 
-              if ( !this._vehicleGettingOn ) {
-                var characters = $gameMap.getCharactersUnder( $gamePlayer, this._x, this._y ).filter( function( character ) {
-                  return character._trigger === 0;
-                } );
+              var characters = $gameMap.getCharactersUnder( $gamePlayer, this._x, this._y ).filter( function( character ) {
+                return character._trigger === 0;
+              } );
 
-                if ( characters.length > 0 ) {
-                  var closest;
-                  var dist = Number.POSITIVE_INFINITY;
-                  for ( var ii = 0; ii < characters.length; ii++ ) {
-                    var entryX = characters[ii]._x;
-                    var entryY = characters[ii]._y;
+              if ( characters.length > 0 ) {
+                var closest;
+                var dist = Number.POSITIVE_INFINITY;
+                for ( var ii = 0; ii < characters.length; ii++ ) {
+                  var entryX = characters[ii]._x;
+                  var entryY = characters[ii]._y;
 
-                    var dx = this._x - entryX;
-                    var dy = this._y - entryY;
-                    var td = ( dx * dx + dy * dy );
-                    if ( td < dist ) {
-                      dist = td;
-                      closest = characters[ii];
-                    }
+                  var dx = this._x - entryX;
+                  var dy = this._y - entryY;
+                  var td = ( dx * dx + dy * dy );
+                  if ( td < dist ) {
+                    dist = td;
+                    closest = characters[ii];
                   }
-                  closest.start();
                 }
+                closest.start();
               }
             }
           }
@@ -937,28 +905,13 @@
           vehicle._passengerCollider = this.collider();
           this._collider = vehicle.collider();
 
-          var dx, dy;
-          if ( $gameMap.isLoopHorizontal() ) {
-            var dxA = vehicle._x - this._x;
-            var dxB = ( vehicle._x - $gameMap.width() ) - this._x;
-            var dxC = ( vehicle._x + $gameMap.width() ) - this._x;
-            dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
-            dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
-          } else {
-            dx = vehicle._x - this._x;
-          }
+          var dx = $gameMap.directionX( this._x, vehicle._x );
+          var dy = $gameMap.directionY( this._y, vehicle._y );
 
-          if ( $gameMap.isLoopVertical() ) {
-            var dyA = vehicle._y - this._y;
-            var dyB = ( vehicle._y - $gameMap.height() ) - this._y;
-            var dyC = ( vehicle._y + $gameMap.height() ) - this._y;
-            dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
-            dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
-          } else {
-            dy = vehicle._y - this._y;
-          }
-
+          var wasThrough = this.isThrough();
+          this.setThrough( true );
           this.moveVector( dx, dy );
+          this.setThrough( wasThrough );
           this.gatherFollowers();
         }
 
@@ -1013,7 +966,7 @@
       };
 
       Game_Player.prototype.updateVehicleGetOff = function() {
-        if ( !this.areFollowersGathering() && this.vehicle().isLowest() ) {
+        if ( !this.areFollowersGathering() && this.vehicle().isLowest() && this._collisionType !== CollisionMesh.WALK ) {
           this._collider = this.vehicle()._passengerCollider;
           this.vehicle()._passengerCollider = undefined;
           this._collisionType = CollisionMesh.WALK;
@@ -1083,26 +1036,8 @@
         var characterCenterX = character.x + characterBox.left + characterWidth / 2;
         var characterCenterY = character.y + characterBox.top + characterHeight / 2;
 
-        var dx, dy;
-        if ( $gameMap.isLoopHorizontal() ) {
-          var dxA = characterCenterX - myCenterX;
-          var dxB = ( characterCenterX - $gameMap.width() ) - myCenterX;
-          var dxC = ( characterCenterX + $gameMap.width() ) - myCenterX;
-          dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
-          dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
-        } else {
-          dx = characterCenterX - myCenterX;
-        }
-
-        if ( $gameMap.isLoopVertical() ) {
-          var dyA = characterCenterY - myCenterY;
-          var dyB = ( characterCenterY - $gameMap.height() ) - myCenterY;
-          var dyC = ( characterCenterY + $gameMap.height() ) - myCenterY;
-          dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
-          dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
-        } else {
-          dy = characterCenterY - myCenterY;
-        }
+        var dx = $gameMap.directionX( myCenterX, characterCenterX );
+        var dy = $gameMap.directionY( myCenterY, characterCenterY );
 
         var distance = Math.sqrt( dx * dx + dy * dy );
         if ( distance > screenRadius ) {
@@ -1164,26 +1099,8 @@
             for ( var ii = 0; ii < visibleFollowers.length; ii++ ) {
               var follower = visibleFollowers[ii];
 
-              var dx, dy;
-              if ( $gameMap.isLoopHorizontal() ) {
-                var dxA = this._targetX - follower._x;
-                var dxB = ( this._targetX - $gameMap.width() ) - follower._x;
-                var dxC = ( this._targetX + $gameMap.width() ) - follower._x;
-                dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
-                dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
-              } else {
-                dx = this._targetX - follower._x;
-              }
-
-              if ( $gameMap.isLoopVertical() ) {
-                var dyA = this._targetY - follower._y;
-                var dyB = ( this._targetY - $gameMap.height() ) - follower._y;
-                var dyC = ( this._targetY + $gameMap.height() ) - follower._y;
-                dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
-                dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
-              } else {
-                dy = this._targetY - follower._y;
-              }
+              var dx = $gameMap.directionX( follower._x, this._targetX );
+              var dy = $gameMap.directionY( follower._y, this._targetY );
 
               var distance = Math.sqrt( dx * dx + dy * dy );
               dx /= distance;
@@ -1220,26 +1137,8 @@
         for ( var ii = 0; ii < visibleFollowers.length; ii++ ) {
           var follower = visibleFollowers[ii];
 
-          var dx, dy;
-          if ( $gameMap.isLoopHorizontal() ) {
-            var dxA = this._targetX - follower._realX;
-            var dxB = ( this._targetX - $gameMap.width() ) - follower._realX;
-            var dxC = ( this._targetX + $gameMap.width() ) - follower._realX;
-            dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
-            dx = Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
-          } else {
-            dx = this._targetX - follower._realX;
-          }
-
-          if ( $gameMap.isLoopVertical() ) {
-            var dyA = this._targetY - follower._realY;
-            var dyB = ( this._targetY - $gameMap.height() ) - follower._realY;
-            var dyC = ( this._targetY + $gameMap.height() ) - follower._realY;
-            dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
-            dy = Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
-          } else {
-            dy = this._targetY - follower._realY;
-          }
+          var dx = $gameMap.directionX( follower._realX, this._targetX );
+          var dy = $gameMap.directionY( follower._realY, this._targetY );
 
           var distance = Math.sqrt( dx * dx + dy * dy );
           if ( distance > screenRadius ) {
@@ -1521,6 +1420,30 @@
      * Extensions
      */
     ( function() {
+
+      Game_Map.prototype.directionX = function( ax, bx ) {
+        if ( this.isLoopHorizontal() ) {
+          var dxA = bx - ax;
+          var dxB = ( bx - this.width() ) - ax;
+          var dxC = ( bx + this.width() ) - ax;
+          dx = Math.abs( dxA ) < Math.abs( dxB ) ? dxA : dxB;
+          return Math.abs( dx ) < Math.abs( dxC ) ? dx : dxC;
+        } else {
+          return bx - ax;
+        }
+      };
+
+      Game_Map.prototype.directionY = function( ay, by ) {
+        if ( this.isLoopVertical() ) {
+          var dyA = by - ay;
+          var dyB = ( by - this.height() ) - ay;
+          var dyC = ( by + this.height() ) - ay;
+          dy = Math.abs( dyA ) < Math.abs( dyB ) ? dyA : dyB;
+          return Math.abs( dy ) < Math.abs( dyC ) ? dy : dyC;
+        } else {
+          return by - ay;
+        }
+      };
 
       Game_Map.prototype.collisionMesh = function( collisionType ) {
         collisionType = collisionType || CollisionMesh.WALK;
