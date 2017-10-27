@@ -373,7 +373,7 @@
         move.y = Math.floor( move.y * Collider.PRECISION ) / Collider.PRECISION;
 
         // Special ladder behaviour
-        if ( this.isOnLadder() && ( this.isInAirship && !this.isInAirship() ) ) {
+        if ( this.isOnLadder() && ( this.isInAirship ? !this.isInAirship() : true ) ) {
           var tileX = Math.round( this._x );
           if ( !$gameMap.isPassable( tileX, this._y + move.y, Direction.LEFT ) ) {
             if ( !$gameMap.isPassable( tileX, this._y + move.y, Direction.RIGHT ) ) {
