@@ -676,12 +676,14 @@
               } else {
                 this.setDirectionVector( 0, dy );
               }
+              if ( this.isOnLadder() ) {
+                this.setDirection(8);
+              }
               this._touchTarget = this.isMovementSucceeded();
             }
 
             if ( !this._touchTarget ) {
-              if ( !this.isInVehicle() ) {
-                this.getOnVehicle();
+              if ( !this.isInVehicle() && this.getOnVehicle() ) {
                 return;
               }
 
@@ -884,7 +886,7 @@
         var boat = $gameMap.boat();
 
         for ( var ii = 0; ii < bboxTests.length; ii++ ) {
-          if ( !!airship && airship._mapId === $gameMap.mapId() == $gameMap.mapId() && Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, airship._x, airship._y, airship.collider().aabbox ) ) {
+          if ( !!airship && airship._mapId === $gameMap.mapId() && Collider.aabboxCheck( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, airship._x, airship._y, airship.collider().aabbox ) ) {
             this._vehicleType = 'airship';
             this._collisionType = CollisionMesh.AIRSHIP;
             vehicle = airship;
