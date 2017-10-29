@@ -112,6 +112,13 @@
  *
  * @param
  *
+ * @param presets
+ * @text Presets
+ * @desc Preset colliders to be referenced by events.
+ * @type note[]
+ *
+ * @param
+ *
  * @param play_test
  * @text Play-testing
  * @desc Parameters when running in Play-test mode.
@@ -163,6 +170,8 @@
     COLLISION_MESH_CACHING: Boolean( PluginManager.parameters( 'AltimitMovement' )['play_test_collision_mesh_caching'] ),
   };
 
+  var PRESETS = JSON.parse( PluginManager.parameters( 'AltimitMovement' )['presets'] );
+
   /**
    * Game_System
    */
@@ -190,6 +199,10 @@
       Object.defineProperties( Game_System.prototype, {
         gridMovementRoute: { get: function() { return this._movementRounding; }, set: function( value ) { this._movementRounding = !!value; }, configurable: true },
       } );
+
+      Game_System.prototype.colliderGetPreset = function( id ) {
+        return Collider.getPreset( id );
+      };
 
       Game_System.prototype.colliderCreateList = function() {
         return Collider.createList();
@@ -2083,8 +2096,9 @@
     Collider.CIRCLE = 0;
     Collider.POLYGON = 1;
     Collider.LIST = 2;
-    Collider.PRECISION = Math.pow( 2, 10 );
+    Collider.PRECISION = Math.pow( 2, 7 );
     Collider.I_PRECISION = 1 / Collider.PRECISION;
+    Collider.PRESETS = [];
 
     Collider.createList = function() {
       return { type: Collider.LIST, colliders: [], aabbox: { left: Number.POSITIVE_INFINITY, top: Number.POSITIVE_INFINITY, right: Number.NEGATIVE_INFINITY, bottom: Number.NEGATIVE_INFINITY } };
@@ -2098,8 +2112,28 @@
       list.aabbox.bottom = collider.aabbox.bottom > list.aabbox.bottom ? collider.aabbox.bottom : list.aabbox.bottom;
     };
 
+    Collider.getPreset = function( id ) {
+      if ( Collider.PRESETS.length === 0 ) {
+        // Index starts at 1 (first item is null collider)
+        Collider.PRESETS[0] = Collider.null();
+        for ( var ii = 0; ii < PRESETS.length; ii++ ) {
+          var xmlDoc = DOM_PARSER.parseFromString( '<collider>' + JSON.parse( PRESETS[ii] ) + '</collider>', 'text/xml' );
+          Collider.PRESETS[ii + 1] = Collider.createFromXML( xmlDoc );
+
+          var childNodes = xmlDoc.childNodes[0].childNodes;
+          for ( var jj = 0; jj < childNodes.length; jj++ ) {
+            if ( childNodes[jj].nodeName === 'name' ) {
+              Collider.PRESETS[childNodes[jj].innerHTML] = Collider.PRESETS[ii + 1];
+              break;
+            }
+          }
+        }
+      }
+      return Collider.PRESETS[id] || null;
+    };
+
     Collider.createFromXML = function( xml ) {
-      var xmlDoc = DOM_PARSER.parseFromString( xml, 'text/xml' );
+      var xmlDoc = ( typeof xml === 'string' ? DOM_PARSER.parseFromString( xml, 'text/xml' ) : xml );
       var childNodes = xmlDoc.childNodes[0].childNodes;
       if ( childNodes.length === 0 ) {
         return Collider.null();
