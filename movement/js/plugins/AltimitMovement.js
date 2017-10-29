@@ -30,12 +30,95 @@
  * @plugindesc Vector-based character movement and collision
  * @author Altimit Community Contributors
  *
- * @param play_test
- * @text Play-test
- * @desc Parameters when running in Play-test mode
+ * @param player
+ * @text Player
+ * @desc Parameters related to player character.
  *
- * @param collision_mesh_caching
- * @text Collision mesh caching
+ * @param player_collider_list
+ * @text Collider
+ * @desc Default collider list for player character.
+ * @parent player
+ * @type note
+ * @default "<circle cx='0.5' cy='0.7' r='0.25' />"
+ *
+ * @param
+ *
+ * @param followers
+ * @text Followers
+ * @desc Parameters related to party followers.
+ *
+ * @param followers_distance
+ * @text Follow distance
+ * @desc Distance of 1 should result in a tight chain. Distance of 2 will have 1-follower worth of space between each follower.
+ * @parent followers
+ * @type number
+ * @min 0
+ * @decimals 2
+ * @default 1.50
+ *
+ * @param followers_collider_list
+ * @text Collider
+ * @desc Default collider list for followers.
+ * @parent followers
+ * @type note
+ * @default "<circle cx='0.5' cy='0.7' r='0.25' />"
+ *
+ * @param
+ *
+ * @param vehicles
+ * @text Vehicles
+ * @desc Parameters related to the vehicles.
+ *
+ * @param vehicles_boat_collider_list
+ * @text Boat collider
+ * @desc Default collider list for the boat.
+ * @parent vehicles
+ * @type note
+ * @default "<circle cx='0.5' cy='0.5' r='0.333' />"
+ *
+ * @param vehicles_ship_collider_list
+ * @text Ship collider
+ * @desc Default collider list for the ship.
+ * @parent vehicles
+ * @type note
+ * @default "<circle cx='0.5' cy='0.5' r='0.5' />"
+ *
+ * @param vehicles_airship_collider_list
+ * @text Airship collider
+ * @desc Default collider list for the airship.
+ * @parent vehicles
+ * @type note
+ * @default "<circle cx='0.5' cy='0.5' r='0.25' />"
+ *
+ * @param
+ *
+ * @param event
+ * @text Events
+ * @desc Parameters related to events.
+ *
+ * @param event_character_collider_list
+ * @text Character collider
+ * @desc Default collider list for character events.
+ * @parent event
+ * @type note
+ * @default "<circle cx='0.5' cy='0.7' r='0.25' />"
+ *
+ * @param event_tile_collider_list
+ * @text Tile collider
+ * @desc Default collider list for tile events.
+ * @parent event
+ * @type note
+ * @default "<rect x='0' y='0' width='1' height='1' />"
+ *
+ * @param
+ *
+ * @param play_test
+ * @text Play-testing
+ * @desc Parameters when running in Play-test mode.
+ *
+ * @param play_test_collision_mesh_caching
+ * @text Use cached collision?
+ * @desc Disabled caching will re-compile the collision mesh for maps that are in-development.
  * @parent play_test
  * @type boolean
  * @on Yes
@@ -49,12 +132,36 @@
  *  Plugin will automatically apply when ON.
  *
  * About:
- *  Version 0.02 Alpha
+ *  Version 0.10 Beta
  *  Website https://github.com/AltimitSystems/mv-plugins/tree/master/movement
  */
 ( function() {
 
-  var COLLISION_MESH_CACHING = Boolean( PluginManager.parameters( 'AltimitMovement' )['collision_mesh_caching'] );
+  var DOM_PARSER = new DOMParser();
+
+  var PLAYER = {
+    COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['player_collider_list'] ) + '</collider>',
+  };
+
+  var FOLLOWERS = {
+    DISTANCE: Number( PluginManager.parameters( 'AltimitMovement' )['followers_distance'] ),
+    COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['followers_collider_list'] ) + '</collider>',
+  };
+
+  var VEHICLES = {
+    BOAT_COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['vehicles_boat_collider_list'] ) + '</collider>',
+    SHIP_COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['vehicles_ship_collider_list'] ) + '</collider>',
+    AIRSHIP_COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['vehicles_airship_collider_list'] ) + '</collider>',
+  };
+
+  var EVENT = {
+    CHARACTER_COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['event_character_collider_list'] ) + '</collider>',
+    TILE_COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['event_tile_collider_list'] ) + '</collider>',
+  };
+
+  var PLAY_TEST = {
+    COLLISION_MESH_CACHING: Boolean( PluginManager.parameters( 'AltimitMovement' )['play_test_collision_mesh_caching'] ),
+  };
 
   /**
    * Game_System
@@ -281,9 +388,59 @@
           && ( character instanceof Game_Vehicle ? character._mapId === $gameMap.mapId() : true );
       }
 
+      Game_CharacterBase.prototype.moveVectorCharacters = function( owner, collider, characters, loopMap, move ) {
+        characters.forEach( function( character ) {
+          var characterX = character._x;
+          var characterY = character._y;
+
+          if ( loopMap[character] == 1 ) { characterX += $gameMap.width(); }
+          else if ( loopMap[character] == 2 ) { characterX -= $gameMap.width(); }
+          else if ( loopMap[character] == 3 ) { characterY += $gameMap.height(); }
+          else if ( loopMap[character] == 4 ) { characterY -= $gameMap.height(); }
+          else if ( loopMap[character] == 5 ) { characterX += $gameMap.width(); characterY += $gameMap.height(); }
+          else if ( loopMap[character] == 6 ) { characterX -= $gameMap.width(); characterY += $gameMap.height(); }
+          else if ( loopMap[character] == 7 ) { characterX += $gameMap.width(); characterY -= $gameMap.height(); }
+          else if ( loopMap[character] == 8 ) { characterX -= $gameMap.width(); characterY -= $gameMap.height(); }
+
+          move = Collider.move( owner._x, owner._y, collider, characterX, characterY, character.collider(), move );
+          if ( move.x === 0 && move.y === 0 ) {
+            return;
+          }
+        } );
+      };
+
+      Game_CharacterBase.prototype.moveVectorMap = function( owner, collider, bboxTests, move, vx, vy ) {
+        for ( var ii = 0; ii < bboxTests.length; ii++ ) {
+          var offsetX = 0;
+          var offsetY = 0;
+          if ( bboxTests[ii].type == 1 ) { offsetX += $gameMap.width(); }
+          else if ( bboxTests[ii].type == 2 ) { offsetX -= $gameMap.width(); }
+          else if ( bboxTests[ii].type == 3 ) { offsetY += $gameMap.height(); }
+          else if ( bboxTests[ii].type == 4 ) { offsetY -= $gameMap.height(); }
+          else if ( bboxTests[ii].type == 5 ) { offsetX += $gameMap.width(); offsetY += $gameMap.height(); }
+          else if ( bboxTests[ii].type == 6 ) { offsetX -= $gameMap.width(); offsetY += $gameMap.height(); }
+          else if ( bboxTests[ii].type == 7 ) { offsetX += $gameMap.width(); offsetY -= $gameMap.height(); }
+          else if ( bboxTests[ii].type == 8 ) { offsetX -= $gameMap.width(); offsetY -= $gameMap.height(); }
+
+          var mapColliders = Collider.polygonsWithinColliderList( bboxTests[ii].x + vx, bboxTests[ii].y + vy, bboxTests[ii].aabbox, 0, 0, $gameMap.collisionMesh( this._collisionType ) );
+          if ( mapColliders.length > 0 ) {
+              if ( move.x !== 0 ) {
+                var sigMove = { x: move.x, y: 0 };
+                mapColliders.forEach( function( mapCollider ) {
+                  sigMove = Collider.move( owner._x, owner._y, collider, offsetX, offsetY, mapCollider, sigMove );
+                } );
+                move.x = sigMove.x;
+              }
+              mapColliders.forEach( function( mapCollider ) {
+                move = Collider.move( owner._x, owner._y, collider, offsetX, offsetY, mapCollider, move );
+              } );
+          }
+        }
+      };
+
       Game_CharacterBase.prototype.moveVector = function( vx, vy ) {
         var move;
-        var inputAsDirection = false;
+        var characterCollided = false;
         if ( this.isThrough() || this.isDebugThrough() ) {
           var aabbox = this.collider().aabbox;
           move = { x: 0, y: 0 };
@@ -321,57 +478,15 @@
           move = { x: vx, y: vy };
 
           // Test collision with characters
-          characters.forEach( function( character ) {
-            var characterX = character._x;
-            var characterY = character._y;
-
-            if ( loopMap[character] == 1 ) { characterX += $gameMap.width(); }
-            else if ( loopMap[character] == 2 ) { characterX -= $gameMap.width(); }
-            else if ( loopMap[character] == 3 ) { characterY += $gameMap.height(); }
-            else if ( loopMap[character] == 4 ) { characterY -= $gameMap.height(); }
-            else if ( loopMap[character] == 5 ) { characterX += $gameMap.width(); characterY += $gameMap.height(); }
-            else if ( loopMap[character] == 6 ) { characterX -= $gameMap.width(); characterY += $gameMap.height(); }
-            else if ( loopMap[character] == 7 ) { characterX += $gameMap.width(); characterY -= $gameMap.height(); }
-            else if ( loopMap[character] == 8 ) { characterX -= $gameMap.width(); characterY -= $gameMap.height(); }
-
-            move = Collider.move( owner._x, owner._y, collider, characterX, characterY, character.collider(), move );
-            if ( move.x === 0 && move.y === 0 ) {
-              return;
-            }
-          } );
+          this.moveVectorCharacters( owner, collider, characters, loopMap, move );
 
           if ( move.x !== vx || move.y !== vy ) {
             // Collided with character, disable direction change
-            inputAsDirection = true;
+            characterCollided = true;
           }
 
           // Test collision with map
-          for ( var ii = 0; ii < bboxTests.length; ii++ ) {
-            var offsetX = 0;
-            var offsetY = 0;
-            if ( bboxTests[ii].type == 1 ) { offsetX += $gameMap.width(); }
-            else if ( bboxTests[ii].type == 2 ) { offsetX -= $gameMap.width(); }
-            else if ( bboxTests[ii].type == 3 ) { offsetY += $gameMap.height(); }
-            else if ( bboxTests[ii].type == 4 ) { offsetY -= $gameMap.height(); }
-            else if ( bboxTests[ii].type == 5 ) { offsetX += $gameMap.width(); offsetY += $gameMap.height(); }
-            else if ( bboxTests[ii].type == 6 ) { offsetX -= $gameMap.width(); offsetY += $gameMap.height(); }
-            else if ( bboxTests[ii].type == 7 ) { offsetX += $gameMap.width(); offsetY -= $gameMap.height(); }
-            else if ( bboxTests[ii].type == 8 ) { offsetX -= $gameMap.width(); offsetY -= $gameMap.height(); }
-
-            var mapColliders = Collider.polygonsWithinColliderList( bboxTests[ii].x + vx, bboxTests[ii].y + vy, bboxTests[ii].aabbox, 0, 0, $gameMap.collisionMesh( this._collisionType ) );
-            if ( mapColliders.length > 0 ) {
-                if ( move.x !== 0 ) {
-                  var sigMove = { x: move.x, y: 0 };
-                  mapColliders.forEach( function( mapCollider ) {
-                    sigMove = Collider.move( owner._x, owner._y, collider, offsetX, offsetY, mapCollider, sigMove );
-                  } );
-                  move.x = sigMove.x;
-                }
-                mapColliders.forEach( function( mapCollider ) {
-                  move = Collider.move( owner._x, owner._y, collider, offsetX, offsetY, mapCollider, move );
-                } );
-            }
-          }
+          this.moveVectorMap( owner, collider, bboxTests, move, vx, vy );
         }
 
         // Resolve too much precision
@@ -395,7 +510,7 @@
           this._realX = this._x - move.x;
           this._realY = this._y - move.y;
           this.setMovementSuccess( true );
-          if ( inputAsDirection ) {
+          if ( characterCollided ) {
             this.setDirectionVector( vx, vy );
           } else {
             this.setDirectionVector( move.x, move.y );
@@ -603,7 +718,7 @@
       var Game_Player_initMembers = Game_Player.prototype.initMembers;
       Game_Player.prototype.initMembers = function() {
         Game_Player_initMembers.call(this);
-        this._collider = Collider.sharedCharacter();
+        this._collider = Collider.createFromXML( PLAYER.COLLIDER_LIST );
       };
 
       Game_Player.prototype.checkEventTriggerTouch = Game_CharacterBase.prototype.checkEventTriggerTouch;
@@ -1040,23 +1155,34 @@
       var Game_Follower_initMembers = Game_Follower.prototype.initMembers;
       Game_Follower.prototype.initMembers = function() {
         Game_Follower_initMembers.call( this );
-        this._collider = Collider.sharedCharacter();
+        this._collider = Collider.createFromXML( FOLLOWERS.COLLIDER_LIST );
       };
 
       Game_Follower.prototype.chaseCharacter = function( character ) {
         var screenRadius = Math.sqrt( Graphics.width * Graphics.width + Graphics.height * Graphics.height ) / 2;
         screenRadius /= Math.sqrt( $gameMap.tileWidth() * $gameMap.tileWidth() + $gameMap.tileHeight() * $gameMap.tileHeight() ) / 2;
-        var myBox = this.collider().aabbox;
 
-        // Move towards character to close up gap
+        var myBox = this.collider().aabbox;
         var myWidth = myBox.right - myBox.left;
         var myHeight = myBox.bottom - myBox.top;
-        var myRadius = Math.sqrt( myWidth * myWidth + myHeight * myHeight ) / 2;
+
+        var myRadius;
+        if ( this.collider().type === Collider.CIRCLE ) {
+          myRadius = this.collider().radius;
+        } else {
+          myRadius = Math.sqrt( myWidth * myWidth + myHeight * myHeight ) / 2;
+        }
 
         var characterBox = character.collider().aabbox;
         var characterWidth = characterBox.right - characterBox.left;
         var characterHeight = characterBox.bottom - characterBox.top;
-        var characterRadius = Math.sqrt( characterWidth * characterWidth + characterHeight * characterHeight ) / 2;
+
+        var characterRadius;
+        if ( character.collider().type === Collider.CIRCLE ) {
+          characterRadius = character.collider().radius;
+        } else {
+          characterRadius = Math.sqrt( characterWidth * characterWidth + characterHeight * characterHeight ) / 2;
+        }
 
         var myCenterX = this.x + myBox.left + myWidth / 2;
         var myCenterY = this.y + myBox.top + myHeight / 2;
@@ -1079,7 +1205,7 @@
           if ( $gameMap.canWalk( this, tx, ty ) ) {
             this.setPosition( tx, ty );
           }
-        } else if ( distance > myRadius + characterRadius ) {
+        } else if ( distance > ( myRadius + characterRadius ) * FOLLOWERS.DISTANCE ) {
           this.setMoveSpeed( character.realMoveSpeed() );
 
           // Prevent snapping through thin walls
@@ -1214,11 +1340,11 @@
         Game_Vehicle_initialize.call( this, type );
 
         if ( this.isAirship() ) {
-          this._collider = Collider.sharedAirship();
+          this._collider = Collider.createFromXML( VEHICLES.AIRSHIP_COLLIDER_LIST );
         } else if ( this.isShip() ) {
-          this._collider = Collider.sharedShip();
+          this._collider = Collider.createFromXML( VEHICLES.SHIP_COLLIDER_LIST );
         } else if ( this.isBoat() ) {
-          this._collider = Collider.sharedBoat();
+          this._collider = Collider.createFromXML( VEHICLES.BOAT_COLLIDER_LIST );
         } else {
           this._collider = Collider.sharedCharacter();
         }
@@ -1327,9 +1453,9 @@
             if ( !!storedCollider ) {
               page._collider = storedCollider;
             } else if ( this.isTile() || !this.characterName() || this.isObjectCharacter() ) {
-              page._collider = Collider.sharedTile();
+              page._collider = Collider.createFromXML( EVENT.TILE_COLLIDER_LIST );
             } else {
-              page._collider = Collider.sharedCharacter();
+              page._collider = Collider.createFromXML( EVENT.CHARACTER_COLLIDER_LIST );
             }
           }
           return page._collider;
@@ -1769,7 +1895,7 @@
       }
 
       var cacheName = 'cache_mesh%1'.format( mapId.padZero( 3 ) );
-      if ( ( !COLLISION_MESH_CACHING && $gameTemp.isPlaytest() ) && StorageManager.exists( cacheName ) ) {
+      if ( ( !PLAY_TEST.COLLISION_MESH_CACHING && $gameTemp.isPlaytest() ) && StorageManager.exists( cacheName ) ) {
         CollisionMesh.meshInMemory.mapId = mapId;
         CollisionMesh.meshInMemory.mesh = JsonEx.parse( StorageManager.load( cacheName ) );
       } else {
@@ -1957,7 +2083,7 @@
     Collider.CIRCLE = 0;
     Collider.POLYGON = 1;
     Collider.LIST = 2;
-    Collider.PRECISION = Math.pow( 2, 7 );
+    Collider.PRECISION = Math.pow( 2, 10 );
     Collider.I_PRECISION = 1 / Collider.PRECISION;
 
     Collider.createList = function() {
@@ -1970,6 +2096,111 @@
       list.aabbox.top = collider.aabbox.top < list.aabbox.top ? collider.aabbox.top : list.aabbox.top;
       list.aabbox.right = collider.aabbox.right > list.aabbox.right ? collider.aabbox.right : list.aabbox.right;
       list.aabbox.bottom = collider.aabbox.bottom > list.aabbox.bottom ? collider.aabbox.bottom : list.aabbox.bottom;
+    };
+
+    Collider.createFromXML = function( xml ) {
+      var xmlDoc = DOM_PARSER.parseFromString( xml, 'text/xml' );
+      var childNodes = xmlDoc.childNodes[0].childNodes;
+      if ( childNodes.length === 0 ) {
+        return Collider.null();
+      } else if ( childNodes.length === 1 ) {
+        switch ( childNodes[0].nodeName ) {
+        case 'rect':
+          var x = Number( childNodes[0].getAttribute( 'x' ) );
+          var y = Number( childNodes[0].getAttribute( 'y' ) );
+          var width = Number( childNodes[0].getAttribute( 'width' ) );
+          var height = Number( childNodes[0].getAttribute( 'height' ) );
+          return Collider.createRect( x, y, width, height );
+        case 'circle':
+          var cx = Number( childNodes[0].getAttribute( 'cx' ) );
+          var cy = Number( childNodes[0].getAttribute( 'cy' ) );
+          var r = Number( childNodes[0].getAttribute( 'r' ) );
+          return Collider.createCircle( cx, cy, r );
+        case 'line':
+          var x1 = Number( childNodes[0].getAttribute( 'x1' ) );
+          var y1 = Number( childNodes[0].getAttribute( 'y1' ) );
+          var x2 = Number( childNodes[0].getAttribute( 'x2' ) );
+          var y2 = Number( childNodes[0].getAttribute( 'y2' ) );
+          return Collider.createLine( x1, y1, x2, y2 );
+        case 'polygon':
+          var points = childNodes[0].getAttribute( 'points' ).split( ' ' );
+          for ( var jj = 0; jj < points.length; jj++ ) {
+            points[jj] = points[jj].split( ',' );
+            for ( var kk = 0; kk < points[jj].length; kk++ ) {
+              points[jj][kk] = Number( points[jj][kk] );
+            }
+          }
+          return Collider.createPolygon( points );
+        case 'regular':
+          var cx = Number( childNodes[0].getAttribute( 'cx' ) );
+          var cy = Number( childNodes[0].getAttribute( 'cy' ) );
+          var rx = Number( childNodes[0].getAttribute( 'rx' ) );
+          var ry = Number( childNodes[0].getAttribute( 'ry' ) );
+          var p = Number( childNodes[0].getAttribute( 'p' ) );
+          return Collider.createRegularPolygon( cx, cy, rx, ry, p );
+        }
+      } else {
+        var colliderList = Collider.createList();
+        for ( var ii = 0; ii < childNodes.length; ii++ ) {
+          switch ( childNodes[ii].nodeName ) {
+          case 'rect':
+            var x = Number( childNodes[ii].getAttribute( 'x' ) );
+            var y = Number( childNodes[ii].getAttribute( 'y' ) );
+            var width = Number( childNodes[ii].getAttribute( 'width' ) );
+            var height = Number( childNodes[ii].getAttribute( 'height' ) );
+            Collider.addToList( colliderList, Collider.createRect( x, y, width, height ) );
+            break;
+          case 'circle':
+            var cx = Number( childNodes[ii].getAttribute( 'cx' ) );
+            var cy = Number( childNodes[ii].getAttribute( 'cy' ) );
+            var r = Number( childNodes[ii].getAttribute( 'r' ) );
+            Collider.addToList( colliderList, Collider.createCircle( cx, cy, r ) );
+            break;
+          case 'line':
+            var x1 = Number( childNodes[ii].getAttribute( 'x1' ) );
+            var y1 = Number( childNodes[ii].getAttribute( 'y1' ) );
+            var x2 = Number( childNodes[ii].getAttribute( 'x2' ) );
+            var y2 = Number( childNodes[ii].getAttribute( 'y2' ) );
+            Collider.addToList( colliderList, Collider.createLine( x1, y1, x2, y2 ) );
+            break;
+          case 'polygon':
+            var points = childNodes[ii].getAttribute( 'points' ).split( ' ' );
+            for ( var jj = 0; jj < points.length; jj++ ) {
+              points[jj] = points[jj].split( ',' );
+              for ( var kk = 0; kk < points[jj].length; kk++ ) {
+                points[jj][kk] = Number( points[jj][kk] );
+              }
+            }
+            Collider.addToList( colliderList, Collider.createPolygon( points ) );
+            break;
+          case 'regular':
+            var cx = Number( childNodes[ii].getAttribute( 'cx' ) );
+            var cy = Number( childNodes[ii].getAttribute( 'cy' ) );
+            var rx = Number( childNodes[ii].getAttribute( 'rx' ) );
+            var ry = Number( childNodes[ii].getAttribute( 'ry' ) );
+            var p = Number( childNodes[ii].getAttribute( 'p' ) );
+            Collider.addToList( colliderList, Collider.createRegularPolygon( cx, cy, rx, ry, p ) );
+            break;
+          }
+        }
+        return colliderList;
+      }
+    };
+
+    Collider.createRect = function( x, y, width, height ) {
+      return Collider.createPolygon( [
+        [ x, y ],
+        [ x + width, y ],
+        [ x + width, y + height ],
+        [ x, y + height ]
+      ] );
+    };
+
+    Collider.createLine = function( x1, y1, x2, y2 ) {
+      return Collider.createPolygon( [
+        [ x1, y1 ],
+        [ x2, y2 ],
+      ] );
     };
 
     Collider.createCircle = function( x, y, radius ) {
@@ -2033,18 +2264,7 @@
 
     Collider.sharedCharacter = function() {
       if ( !Collider._sharedCharacter ) {
-        // Collider._sharedCharacter = Collider.createPolygon( [
-        //   [ 0.25, 0.5 ],
-        //   [ 0.75, 0.5 ],
-        //   [ 0.75, 0.9 ],
-        //   [ 0.25, 0.9 ],
-        // ] );
-        // Collider._sharedCharacter = Collider.sharedTile();
-        // Collider._sharedCharacter = Collider.sharedCircle();
-        // Collider._sharedCharacter = Collider.createRegularPolygon( 0.5, 0.5, 0.5, 0.5, 8 );
-        // Collider._sharedCharacter = Collider.createRegularPolygon( 0.5, 0.7, 0.25, 0.25, 4 );
         Collider._sharedCharacter = Collider.createCircle( 0.5, 0.7, 0.25 );
-        // Collider._sharedCharacter = Collider.createCircle( 0.5, 0.5, 1.0 );
       }
       return Collider._sharedCharacter;
     };
