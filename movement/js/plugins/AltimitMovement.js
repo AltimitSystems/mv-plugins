@@ -269,11 +269,11 @@
           && character !== this
           && character.isNormalPriority()
           && this.isNormalPriority()
-          && !character.isThrough()
           && !this.isThrough()
           && ( !character.isVisible ? true : character.isVisible() )
           && ( !this.vehicle ? true : this.vehicle() !== character )
           && ( !this.followers ? true : !this.followers().contains( character ) )
+          && ( character instanceof Game_Follower ? true : !character.isThrough() )
           && !( this instanceof Game_Follower ? character instanceof Game_Follower : false )
           && !( this instanceof Game_Follower ? character instanceof Game_Player : false )
           && !( this instanceof Game_Vehicle ? character instanceof Game_Player : false )
@@ -283,6 +283,7 @@
 
       Game_CharacterBase.prototype.moveVector = function( vx, vy ) {
         var move;
+        var inputAsDirection = false;
         if ( this.isThrough() || this.isDebugThrough() ) {
           var aabbox = this.collider().aabbox;
           move = { x: 0, y: 0 };
@@ -339,6 +340,11 @@
             }
           } );
 
+          if ( move.x !== vx || move.y !== vy ) {
+            // Collided with character, disable direction change
+            inputAsDirection = true;
+          }
+
           // Test collision with map
           for ( var ii = 0; ii < bboxTests.length; ii++ ) {
             var offsetX = 0;
@@ -389,7 +395,11 @@
           this._realX = this._x - move.x;
           this._realY = this._y - move.y;
           this.setMovementSuccess( true );
-          this.setDirectionVector( move.x, move.y );
+          if ( inputAsDirection ) {
+            this.setDirectionVector( vx, vy );
+          } else {
+            this.setDirectionVector( move.x, move.y );
+          }
           this.increaseSteps();
           this._isMoving = true;
 
@@ -929,7 +939,19 @@
           if ( this.isInAirship() ) {
             this.setDirection( 2 );
           }
-          this._followers.synchronize( this.x, this.y, this.direction() );
+
+          var vhx = this.vehicle().x;
+          var vhy = this.vehicle().y;
+          var vhd = this.vehicle().direction();
+          this._followers.forEach( function(follower) {
+              follower._x = vhx;
+              follower._y = vhy;
+              follower._realX = vhx;
+              follower._realY = vhy;
+              follower.setDirection( vhd );
+          } );
+
+          // this._followers.synchronize( this.vehicle().x, this.vehicle().y, this.vehicle().direction() );
           this.vehicle().getOff();
 
           if ( !this.isInAirship() ) {
