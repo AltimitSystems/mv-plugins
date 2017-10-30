@@ -135,15 +135,15 @@
  * @help
  *
  * Plugin Command:
- *   AltMovement collider set "foo bar" "my preset" # Event name "foo bar" collider to preset "my preset"
- *   AltMovement collider set this 1                # Current event collider to preset 1
- *   AltMovement collider set player 3              # Player collider to preset 3
- *   AltMovement collider set boat "boat"           # Boat collider to preset "boat"
- *   AltMovement collider set ship "big boat"       # Ship collider to preset "big boat"
- *   AltMovement collider set airship "fly boat"    # Airship collider to preset "fly boat"
- *   AltMovement collider set follower0 2           # Follower 0 collider to preset 2
- *   AltMovement collider set follower1 2           # Follower 1 collider to preset 2
- *   AltMovement collider set follower2 "baz"       # Follower 2 collider to preset "baz"
+ *   AltMovement collider set "foo bar" "shape a" # Event name "foo bar" collider to preset "shape a"
+ *   AltMovement collider set this 1              # Current event collider to preset 1
+ *   AltMovement collider set player 3            # Player collider to preset 3
+ *   AltMovement collider set boat "boat"         # Boat collider to preset "boat"
+ *   AltMovement collider set ship "big boat"     # Ship collider to preset "big boat"
+ *   AltMovement collider set airship "fly boat"  # Airship collider to preset "fly boat"
+ *   AltMovement collider set follower0 2         # Follower 0 collider to preset 2
+ *   AltMovement collider set follower1 2         # Follower 1 collider to preset 2
+ *   AltMovement collider set follower2 "baz"     # Follower 2 collider to preset "baz"
  *
  * Usage:
  *  Plugin will automatically apply when ON.
