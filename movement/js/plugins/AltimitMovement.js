@@ -113,7 +113,7 @@
  * @param
  *
  * @param presets
- * @text Presets
+ * @text Collider presets
  * @desc Preset colliders to be referenced by events.
  * @type note[]
  *
@@ -133,13 +133,23 @@
  * @default false
  *
  * @help
- * This plugin does not provide plugin commands.
+ *
+ * Plugin Command:
+ *   AltMovement collider set "foo bar" "my preset" # Event name "foo bar" collider to preset "my preset"
+ *   AltMovement collider set this 1                # Current event collider to preset 1
+ *   AltMovement collider set player 3              # Player collider to preset 3
+ *   AltMovement collider set boat "boat"           # Boat collider to preset "boat"
+ *   AltMovement collider set ship "big boat"       # Ship collider to preset "big boat"
+ *   AltMovement collider set airship "fly boat"    # Airship collider to preset "fly boat"
+ *   AltMovement collider set follower0 2           # Follower 0 collider to preset 2
+ *   AltMovement collider set follower1 2           # Follower 1 collider to preset 2
+ *   AltMovement collider set follower2 "baz"       # Follower 2 collider to preset "baz"
  *
  * Usage:
  *  Plugin will automatically apply when ON.
  *
  * About:
- *  Version 0.10 Beta
+ *  Version 0.20 Beta
  *  Website https://github.com/AltimitSystems/mv-plugins/tree/master/movement
  */
 ( function() {
@@ -246,6 +256,117 @@
 
       Game_System.prototype.colliderSharedBoat = function() {
         return Collider.sharedBoat();
+      };
+
+    } )();
+
+  } )();
+
+  /**
+   * Game_Interpreter
+   */
+  ( function() {
+
+    /**
+     * Overrides
+     */
+    ( function() {
+
+      var Game_Interpreter_pluginCommand = Game_Interpreter.prototype.pluginCommand;
+      Game_Interpreter.prototype.pluginCommand = function( command, args ) {
+        Game_Interpreter_pluginCommand.call( this, command, args );
+        if ( command === 'AltMovement' ) {
+          switch ( args[0] ) {
+          case 'collider':
+            this.altMovementCollider( args );
+            break;
+          }
+        }
+      };
+
+    } )();
+
+    /**
+     * Extensions
+     */
+    ( function() {
+
+      Game_Interpreter.prototype.altMovementCollider = function( args ) {
+        var str = args.join( ' ' );
+        var args = [];
+        var readingPart = false;
+        var part = '';
+        for ( var ii = 0; ii < str.length; ii++ ) {
+          if ( str.charAt( ii ) === ' ' && !readingPart ) {
+            args.push( part );
+            part = '';
+          } else {
+            if ( str.charAt( ii ) === '\"' ) {
+              readingPart = !readingPart;
+            }
+            part += str.charAt( ii );
+          }
+        }
+        args.push( part );
+
+        switch ( args[1] ) {
+        case 'set':
+          this.altMovementColliderSet( args );
+          break;
+        }
+      };
+
+      Game_Interpreter.prototype.altMovementColliderSet = function( args ) {
+        var target = this.altMovementGetTargetCharacter( args[2] );
+        if ( !target ) {
+          return;
+        }
+
+        var presetIndex = Number( args[3] );
+        if ( isNaN( presetIndex ) ) {
+          target.setCollider( Collider.getPreset( args[3].substring( 1, args[3].length - 1 ) ) );
+        } else {
+          target.setCollider( Collider.getPreset( presetIndex ) );
+        }
+      };
+
+      Game_Interpreter.prototype.altMovementGetTargetCharacter = function( target ) {
+        if ( target.startsWith( '\"' ) && target.endsWith( '\"' ) ) {
+          // Event name
+          var eventName = target.substring( 1, target.length - 1 );
+          for ( var ii = 0; ii < $dataMap.events.length; ii++ ) {
+            if ( $dataMap.events[ii] && $dataMap.events[ii].name === eventName ) {
+              return $gameMap.event( $dataMap.events[ii].id );
+            }
+          }
+        } else {
+          // System name
+          switch ( target ) {
+          case 'this':
+            var eventId = this._eventId;
+            // This Event ID #
+            return $gameMap.event( eventId );
+          case 'player':
+            return $gamePlayer;
+          case 'boat':
+            return $gameMap.boat();
+          case 'ship':
+            return $gameMap.ship();
+          case 'airship':
+            return $gameMap.airship();
+          default:
+            if ( target.startsWith( 'follower') ) {
+              var index = Number( target.substring( 8 ) );
+              // Follower index
+              return $gamePlayer.followers().follower( index );
+            } else {
+              var eventId = Number( target );
+              // Event ID #
+              return $gameMap.event( eventId );
+            }
+          }
+        }
+        return null;
       };
 
     } )();
@@ -568,6 +689,10 @@
 
       Game_CharacterBase.prototype.collider = function() {
         return this._collider || Collider.sharedTile();
+      };
+
+      Game_CharacterBase.prototype.setCollider = function( collider ) {
+        this._collider = collider;
       };
 
     } )();
@@ -1465,7 +1590,53 @@
             var storedCollider = $gameSystem._eventColliders[mapId] ? $gameSystem._eventColliders[mapId][this.eventId()] : undefined;
             if ( !!storedCollider ) {
               page._collider = storedCollider;
-            } else if ( this.isTile() || !this.characterName() || this.isObjectCharacter() ) {
+            }
+          }
+
+          if ( !page._collider ) {
+            var comments = [];
+            for ( var ii = 0; ii < page.list.length; ii++ ) {
+              if ( page.list[ii].code === 108 || page.list[ii].code === 408 ) {
+                comments.push( page.list[ii].parameters[0] );
+              }
+            }
+            if ( comments.length > 0 ) {
+              var xmlDoc = DOM_PARSER.parseFromString( '<doc>' + comments.join( '\n' ) + '</doc>', 'text/xml' );
+              var childNodes = xmlDoc.childNodes[0].childNodes;
+              for ( var ii = 0; ii < childNodes.length; ii++ ) {
+                if ( childNodes[ii].nodeName === 'collider' ) {
+                  var collider = Collider.createFromXML( xmlDoc.childNodes[0] );
+                  if ( collider === Collider.null() ) {
+                    var childChilds = childNodes[ii].childNodes;
+                    for ( var jj = 0; jj < childChilds.length; jj++ ) {
+                      if ( childChilds[jj].nodeName === 'preset' ) {
+                        page._collider = Collider.getPreset( childChilds[jj].innerHTML.trim() );
+                        break;
+                      }
+                    }
+                  } else {
+                    page._collider = collider;
+                  }
+                  break;
+                }
+              }
+            }
+          }
+
+          if ( !page._collider ) {
+            var presetId = $dataMap.events[this.eventId()].meta.collider;
+            if ( presetId ) {
+              var asNum = +presetId;
+              if ( isNaN( asNum ) ) {
+                page._collider = Collider.getPreset( presetId.trim() );
+              } else {
+                page._collider = Collider.getPreset( asNum );
+              }
+            }
+          }
+
+          if ( !page._collider ) {
+            if ( this.isTile() || !this.characterName() || this.isObjectCharacter() ) {
               page._collider = Collider.createFromXML( EVENT.TILE_COLLIDER_LIST );
             } else {
               page._collider = Collider.createFromXML( EVENT.CHARACTER_COLLIDER_LIST );
@@ -2123,7 +2294,7 @@
           var childNodes = xmlDoc.childNodes[0].childNodes;
           for ( var jj = 0; jj < childNodes.length; jj++ ) {
             if ( childNodes[jj].nodeName === 'name' ) {
-              Collider.PRESETS[childNodes[jj].innerHTML] = Collider.PRESETS[ii + 1];
+              Collider.PRESETS[childNodes[jj].innerHTML.trim()] = Collider.PRESETS[ii + 1];
               break;
             }
           }
@@ -2134,7 +2305,26 @@
 
     Collider.createFromXML = function( xml ) {
       var xmlDoc = ( typeof xml === 'string' ? DOM_PARSER.parseFromString( xml, 'text/xml' ) : xml );
-      var childNodes = xmlDoc.childNodes[0].childNodes;
+      var childNodes;
+      for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
+        if ( xmlDoc.childNodes[ii].nodeName === 'collider' ) {
+          childNodes = xmlDoc.childNodes[ii].childNodes;
+          break;
+        }
+      }
+      var filterNodes = [];
+      for ( var ii = 0; ii < childNodes.length; ii++ ) {
+        switch ( childNodes[ii].nodeName ) {
+        case 'rect':
+        case 'circle':
+        case 'line':
+        case 'polygon':
+        case 'regular':
+          filterNodes.push( childNodes[ii] );
+          break;
+        }
+      }
+      childNodes = filterNodes;
       if ( childNodes.length === 0 ) {
         return Collider.null();
       } else if ( childNodes.length === 1 ) {
