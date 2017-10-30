@@ -145,6 +145,8 @@
  *   AltMovement collider set follower1 2         # Follower 1 collider to preset 2
  *   AltMovement collider set follower2 "baz"     # Follower 2 collider to preset "baz"
  *
+ *   AltMovement followers set distance 0.5       # Sets follower distance to 0.5 units
+ *
  * Usage:
  *  Plugin will automatically apply when ON.
  *
@@ -197,6 +199,7 @@
        Game_System_initialize.call( this );
        this._eventColliders = [];
        this._movementRounding = true;
+       this._followerDistance = FOLLOWERS.DISTANCE;
      };
 
    } )();
@@ -208,6 +211,7 @@
 
       Object.defineProperties( Game_System.prototype, {
         gridMovementRoute: { get: function() { return this._movementRounding; }, set: function( value ) { this._movementRounding = !!value; }, configurable: true },
+        followerDistance: { get: function() { return this._followerDistance; }, set: function( value ) { this._followerDistance = value; }, configurable: true },
       } );
 
       Game_System.prototype.colliderGetPreset = function( id ) {
@@ -279,6 +283,17 @@
           switch ( args[0] ) {
           case 'collider':
             this.altMovementCollider( args );
+            break;
+          case 'followers':
+            switch ( args[1] ) {
+            case 'set':
+              switch ( args[2] ) {
+              case 'distance':
+                $gameSystem.followerDistance = Number( args[3] );
+                break;
+              }
+              break;
+            }
             break;
           }
         }
@@ -1343,7 +1358,7 @@
           if ( $gameMap.canWalk( this, tx, ty ) ) {
             this.setPosition( tx, ty );
           }
-        } else if ( distance > ( myRadius + characterRadius ) * FOLLOWERS.DISTANCE ) {
+        } else if ( distance > ( myRadius + characterRadius ) * $gameSystem._followerDistance ) {
           this.setMoveSpeed( character.realMoveSpeed() );
 
           // Prevent snapping through thin walls
