@@ -116,6 +116,7 @@
  * @text Collider presets
  * @desc Preset colliders to be referenced by events.
  * @type note[]
+ * @default []
  *
  * @param
  *
@@ -158,27 +159,111 @@
 
   var DOM_PARSER = new DOMParser();
 
-  var PLAYER = {
-    COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['player_collider_list'] ) + '</collider>',
-  };
+  /**
+   * PLAYER
+   */
+  var PLAYER;
+  ( function() {
 
-  var FOLLOWERS = {
-    DISTANCE: Number( PluginManager.parameters( 'AltimitMovement' )['followers_distance'] ),
-    COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['followers_collider_list'] ) + '</collider>',
-  };
+    PLAYER = {};
 
-  var VEHICLES = {
-    BOAT_COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['vehicles_boat_collider_list'] ) + '</collider>',
-    SHIP_COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['vehicles_ship_collider_list'] ) + '</collider>',
-    AIRSHIP_COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['vehicles_airship_collider_list'] ) + '</collider>',
-  };
+    var colliderList = PluginManager.parameters( 'AltimitMovement' )['player_collider_list'];
+    if ( colliderList ) {
+      PLAYER.COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
+    } else {
+      PLAYER.COLLIDER_LIST = "<collider><circle cx='0.5' cy='0.7' r='0.25' /></collider>";
+    }
 
-  var EVENT = {
-    CHARACTER_COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['event_character_collider_list'] ) + '</collider>',
-    TILE_COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['event_tile_collider_list'] ) + '</collider>',
-  };
+  } )();
 
-  var PRESETS = JSON.parse( PluginManager.parameters( 'AltimitMovement' )['presets'] );
+  /**
+   * FOLLOWERS
+   */
+  var FOLLOWERS;
+  ( function() {
+
+    FOLLOWERS = {
+      DISTANCE: Number( PluginManager.parameters( 'AltimitMovement' )['followers_distance'] ),
+    };
+
+    var colliderList = PluginManager.parameters( 'AltimitMovement' )['followers_collider_list'];
+    if ( colliderList ) {
+      FOLLOWERS.COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
+    } else {
+      FOLLOWERS.COLLIDER_LIST = "<collider><circle cx='0.5' cy='0.7' r='0.25' /></collider>";
+    }
+
+  } )();
+
+  /**
+   * VEHICLES
+   */
+  var VEHICLES;
+  ( function() {
+
+    VEHICLES = {};
+
+    var colliderList = PluginManager.parameters( 'AltimitMovement' )['vehicles_boat_collider_list'];
+    if ( colliderList ) {
+      VEHICLES.BOAT_COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
+    } else {
+      VEHICLES.BOAT_COLLIDER_LIST = "<collider><circle cx='0.5' cy='0.5' r='0.333' /></collider>";
+    }
+
+    var colliderList = PluginManager.parameters( 'AltimitMovement' )['vehicles_ship_collider_list'];
+    if ( colliderList ) {
+      VEHICLES.SHIP_COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
+    } else {
+      VEHICLES.SHIP_COLLIDER_LIST = "<collider><circle cx='0.5' cy='0.5' r='0.5' /></collider>";
+    }
+
+    var colliderList = PluginManager.parameters( 'AltimitMovement' )['vehicles_airship_collider_list'];
+    if ( colliderList ) {
+      VEHICLES.AIRSHIP_COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
+    } else {
+      VEHICLES.AIRSHIP_COLLIDER_LIST = "<collider><circle cx='0.5' cy='0.5' r='0.25' /></collider>";
+    }
+
+  } )();
+
+  /**
+   * EVENT
+   */
+  var EVENT;
+  ( function() {
+
+    EVENT = {};
+
+    var colliderList = PluginManager.parameters( 'AltimitMovement' )['event_character_collider_list'];
+    if ( colliderList ) {
+      EVENT.CHARACTER_COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
+    } else {
+      EVENT.CHARACTER_COLLIDER_LIST = "<collider><circle cx='0.5' cy='0.7' r='0.25' /></collider>";
+    }
+
+    var colliderList = PluginManager.parameters( 'AltimitMovement' )['event_tile_collider_list'];
+    if ( colliderList ) {
+      EVENT.TILE_COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
+    } else {
+      EVENT.TILE_COLLIDER_LIST = "<collider><rect x='0' y='0' width='1' height='1' /></collider>";
+    }
+
+  } )();
+
+  /**
+   * PRESETS
+   */
+  var PRESETS;
+  ( function() {
+
+    var presets = PluginManager.parameters( 'AltimitMovement' )['presets'];
+    if ( presets ) {
+      PRESETS = presets;
+    } else {
+      PRESETS = [];
+    }
+
+  } )();
 
   var PLAY_TEST = {
     COLLISION_MESH_CACHING: Boolean( PluginManager.parameters( 'AltimitMovement' )['play_test_collision_mesh_caching'] ),
@@ -1317,32 +1402,32 @@
         screenRadius /= Math.sqrt( $gameMap.tileWidth() * $gameMap.tileWidth() + $gameMap.tileHeight() * $gameMap.tileHeight() ) / 2;
 
         var myBox = this.collider().aabbox;
-        var myWidth = myBox.right - myBox.left;
-        var myHeight = myBox.bottom - myBox.top;
 
         var myRadius;
         if ( this.collider().type === Collider.CIRCLE ) {
           myRadius = this.collider().radius;
         } else {
+          var myWidth = myBox.right - myBox.left;
+          var myHeight = myBox.bottom - myBox.top;
           myRadius = Math.sqrt( myWidth * myWidth + myHeight * myHeight ) / 2;
         }
 
         var characterBox = character.collider().aabbox;
-        var characterWidth = characterBox.right - characterBox.left;
-        var characterHeight = characterBox.bottom - characterBox.top;
 
         var characterRadius;
         if ( character.collider().type === Collider.CIRCLE ) {
           characterRadius = character.collider().radius;
         } else {
+          var characterWidth = characterBox.right - characterBox.left;
+          var characterHeight = characterBox.bottom - characterBox.top;
           characterRadius = Math.sqrt( characterWidth * characterWidth + characterHeight * characterHeight ) / 2;
         }
 
-        var myCenterX = this.x + myBox.left + myWidth / 2;
-        var myCenterY = this.y + myBox.top + myHeight / 2;
+        var myCenterX = this.x + ( myBox.left + myBox.right ) / 2;
+        var myCenterY = this.y + ( myBox.top + myBox.bottom ) / 2;
 
-        var characterCenterX = character.x + characterBox.left + characterWidth / 2;
-        var characterCenterY = character.y + characterBox.top + characterHeight / 2;
+        var characterCenterX = character.x + ( characterBox.left + characterBox.right ) / 2;
+        var characterCenterY = character.y + ( characterBox.top + characterBox.bottom ) / 2;
 
         var dx = $gameMap.directionX( myCenterX, characterCenterX );
         var dy = $gameMap.directionY( myCenterY, characterCenterY );
