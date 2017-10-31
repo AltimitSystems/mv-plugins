@@ -1730,7 +1730,8 @@
           }
 
           if ( !page._collider ) {
-            var presetId = $dataMap.events[this.eventId()].meta.collider;
+            var dataEvent = $dataMap.events[this.eventId()];
+            var presetId = dataEvent ? dataEvent.meta.collider : null;
             if ( presetId ) {
               var asNum = +presetId;
               if ( isNaN( asNum ) ) {
