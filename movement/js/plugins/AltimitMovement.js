@@ -49,7 +49,7 @@
  *
  * @param followers_distance
  * @text Follow distance
- * @desc Distance of 1 should result in a tight chain. Distance of 2 will have 1-follower worth of space between each follower.
+ * @desc Distance of 1 results in a tight chain. Distance of 2 will double the spacing.
  * @parent followers
  * @type number
  * @min 0
@@ -178,11 +178,11 @@
     TILE_COLLIDER_LIST: '<collider>' + JSON.parse( PluginManager.parameters( 'AltimitMovement' )['event_tile_collider_list'] ) + '</collider>',
   };
 
+  var PRESETS = JSON.parse( PluginManager.parameters( 'AltimitMovement' )['presets'] );
+
   var PLAY_TEST = {
     COLLISION_MESH_CACHING: Boolean( PluginManager.parameters( 'AltimitMovement' )['play_test_collision_mesh_caching'] ),
   };
-
-  var PRESETS = JSON.parse( PluginManager.parameters( 'AltimitMovement' )['presets'] );
 
   /**
    * Game_System
@@ -430,8 +430,8 @@
 
       Game_CharacterBase.prototype.isOnLadder = function() {
         var aabbox = this.collider().aabbox;
-        if ( aabbox.right - aabbox.left > 1 ) {
-          // Ladders must be 1-tile wide
+        if ( aabbox.left >= 0 && aabbox.right <= 1 ) {
+          // To use ladder the bounding box must fit on a tile
           return false;
         }
         // If middle is on ladder
