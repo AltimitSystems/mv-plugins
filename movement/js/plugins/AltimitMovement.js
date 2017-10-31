@@ -258,7 +258,7 @@
 
     var presets = PluginManager.parameters( 'AltimitMovement' )['presets'];
     if ( presets ) {
-      PRESETS = presets;
+      PRESETS = JSON.parse( presets );
     } else {
       PRESETS = [];
     }
