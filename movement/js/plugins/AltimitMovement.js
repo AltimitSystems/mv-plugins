@@ -199,6 +199,7 @@
        Game_System_initialize.call( this );
        this._eventColliders = [];
        this._movementRounding = true;
+       this._staticFollowerDistance = FOLLOWERS.DISTANCE;
        this._followerDistance = FOLLOWERS.DISTANCE;
      };
 
@@ -1428,6 +1429,11 @@
           this.visibleFollowers().forEach( function( follower ) {
             follower.update();
           }, this );
+
+          if ( $gameSystem._staticFollowerDistance != FOLLOWERS.DISTANCE ) {
+            $gameSystem._staticFollowerDistance = FOLLOWERS.DISTANCE;
+            $gameSystem._followerDistance = FOLLOWERS.DISTANCE;
+          }
       };
 
       Game_Followers.prototype.gather = function() {
