@@ -120,6 +120,21 @@
  *
  * @param
  *
+ * @param move_route
+ * @text Move route behaviour
+ * @desc Parameters related to character move routes.
+ *
+ * @param move_route_align_adjacent
+ * @text Align to adjacent tiles?
+ * @desc If character is offset on a tile align them to the tile grid when moving.
+ * @parent move_route
+ * @type boolean
+ * @on Yes
+ * @off No
+ * @default true
+ *
+ * @param
+ *
  * @param play_test
  * @text Play-testing
  * @desc Parameters when running in Play-test mode.
@@ -136,28 +151,41 @@
  * @help
  *
  * Plugin Command:
- *   AltMovement collider set "foo bar" "shape a" # Event name "foo bar" collider to preset "shape a"
- *   AltMovement collider set this 1              # Current event collider to preset 1
- *   AltMovement collider set player 3            # Player collider to preset 3
- *   AltMovement collider set boat "boat"         # Boat collider to preset "boat"
- *   AltMovement collider set ship "big boat"     # Ship collider to preset "big boat"
- *   AltMovement collider set airship "fly boat"  # Airship collider to preset "fly boat"
- *   AltMovement collider set follower0 2         # Follower 0 collider to preset 2
- *   AltMovement collider set follower1 2         # Follower 1 collider to preset 2
- *   AltMovement collider set follower2 "baz"     # Follower 2 collider to preset "baz"
+ *   AltMovement collider set "foo bar" 5             # Event name "foo bar" collider to preset 5
+ *   AltMovement collider set 2 "shape A"             # Event ID 2 collider to preset "shape A"
+ *   AltMovement collider set this 1                  # Current event collider to preset 1
+ *   AltMovement collider set player 3                # Player collider to preset 3
+ *   AltMovement collider set boat "boat"             # Boat collider to preset "boat"
+ *   AltMovement collider set ship "big boat"         # Ship collider to preset "big boat"
+ *   AltMovement collider set airship "fly boat"      # Airship collider to preset "fly boat"
+ *   AltMovement collider set follower0 2             # Follower 0 collider to preset 2
+ *   AltMovement collider set follower1 2             # Follower 1 collider to preset 2
+ *   AltMovement collider set follower2 "baz"         # Follower 2 collider to preset "baz"
  *
- *   AltMovement followers set distance 0.5       # Sets follower distance to 0.5 units
+ *   AltMovement followers set distance 0.5           # Sets follower distance to 0.5 units
+ *
+ *   AltMovement move_align set false                 # Sets move route adjacent alignment to false
+ *
+ *   AltMovement move "foo bar" up 0.1                # Moves event named "foo bar" up 0.1 units
+ *   AltMovement move 2 east 1 wait skip              # Moves event ID 2 east 1 unit, wait and skip
+ *   AltMovement move this 9 0.5                      # Moves current event upper-right 0.5 units
+ *   AltMovement move player top_left edge            # Moves player upper-left to tile edge
+ *   AltMovement move follower0 away boat 2           # Moves follower 0 2 units away from boat
+ *   AltMovement move follower2 toward follower0 0.5  # Moves follower 2 0.5 units towards follower 0
+ *   AltMovement move airship random 6.5              # Moves airship in random direction 6.5 units
+ *   AltMovement move this forward 1 skip             # Moves current event forward 1 unit
  *
  * Usage:
  *  Plugin will automatically apply when ON.
  *
  * About:
- *  Version 0.20 Beta
+ *  Version 0.30 Beta
  *  Website https://github.com/AltimitSystems/mv-plugins/tree/master/movement
  */
 ( function() {
 
   var DOM_PARSER = new DOMParser();
+  var PARAMETERS = PluginManager.parameters( 'AltimitMovement' );
 
   /**
    * PLAYER
@@ -167,7 +195,7 @@
 
     PLAYER = {};
 
-    var colliderList = PluginManager.parameters( 'AltimitMovement' )['player_collider_list'];
+    var colliderList = PARAMETERS['player_collider_list'];
     if ( colliderList ) {
       PLAYER.COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
     } else {
@@ -183,10 +211,10 @@
   ( function() {
 
     FOLLOWERS = {
-      DISTANCE: Number( PluginManager.parameters( 'AltimitMovement' )['followers_distance'] ),
+      DISTANCE: Number( PARAMETERS['followers_distance'] ),
     };
 
-    var colliderList = PluginManager.parameters( 'AltimitMovement' )['followers_collider_list'];
+    var colliderList = PARAMETERS['followers_collider_list'];
     if ( colliderList ) {
       FOLLOWERS.COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
     } else {
@@ -203,21 +231,21 @@
 
     VEHICLES = {};
 
-    var colliderList = PluginManager.parameters( 'AltimitMovement' )['vehicles_boat_collider_list'];
+    var colliderList = PARAMETERS['vehicles_boat_collider_list'];
     if ( colliderList ) {
       VEHICLES.BOAT_COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
     } else {
       VEHICLES.BOAT_COLLIDER_LIST = "<collider><circle cx='0.5' cy='0.5' r='0.333' /></collider>";
     }
 
-    var colliderList = PluginManager.parameters( 'AltimitMovement' )['vehicles_ship_collider_list'];
+    var colliderList = PARAMETERS['vehicles_ship_collider_list'];
     if ( colliderList ) {
       VEHICLES.SHIP_COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
     } else {
       VEHICLES.SHIP_COLLIDER_LIST = "<collider><circle cx='0.5' cy='0.5' r='0.5' /></collider>";
     }
 
-    var colliderList = PluginManager.parameters( 'AltimitMovement' )['vehicles_airship_collider_list'];
+    var colliderList = PARAMETERS['vehicles_airship_collider_list'];
     if ( colliderList ) {
       VEHICLES.AIRSHIP_COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
     } else {
@@ -234,14 +262,14 @@
 
     EVENT = {};
 
-    var colliderList = PluginManager.parameters( 'AltimitMovement' )['event_character_collider_list'];
+    var colliderList = PARAMETERS['event_character_collider_list'];
     if ( colliderList ) {
       EVENT.CHARACTER_COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
     } else {
       EVENT.CHARACTER_COLLIDER_LIST = "<collider><circle cx='0.5' cy='0.7' r='0.25' /></collider>";
     }
 
-    var colliderList = PluginManager.parameters( 'AltimitMovement' )['event_tile_collider_list'];
+    var colliderList = PARAMETERS['event_tile_collider_list'];
     if ( colliderList ) {
       EVENT.TILE_COLLIDER_LIST = '<collider>' + JSON.parse( colliderList ) + '</collider>';
     } else {
@@ -256,7 +284,7 @@
   var PRESETS;
   ( function() {
 
-    var presets = PluginManager.parameters( 'AltimitMovement' )['presets'];
+    var presets = PARAMETERS['presets'];
     if ( presets ) {
       PRESETS = JSON.parse( presets );
     } else {
@@ -265,8 +293,12 @@
 
   } )();
 
+  var MOVE_ROUTE = {
+    ALIGN_ADJACENT: ( PARAMETERS['move_route_align_adjacent'] != 'false' ),
+  };
+
   var PLAY_TEST = {
-    COLLISION_MESH_CACHING: Boolean( PluginManager.parameters( 'AltimitMovement' )['play_test_collision_mesh_caching'] ),
+    COLLISION_MESH_CACHING: ( PARAMETERS['play_test_collision_mesh_caching'] != 'false' ),
   };
 
   /**
@@ -283,72 +315,15 @@
      Game_System.prototype.initialize = function() {
        Game_System_initialize.call( this );
        this._eventColliders = [];
-       this._movementRounding = true;
+
+       this._staticMoveAlignAdjacent = MOVE_ROUTE.ALIGN_ADJACENT;
+       this._moveAlignAdjacent = MOVE_ROUTE.ALIGN_ADJACENT;
+
        this._staticFollowerDistance = FOLLOWERS.DISTANCE;
        this._followerDistance = FOLLOWERS.DISTANCE;
      };
 
    } )();
-
-    /**
-     * Extensions
-     */
-    ( function() {
-
-      Object.defineProperties( Game_System.prototype, {
-        gridMovementRoute: { get: function() { return this._movementRounding; }, set: function( value ) { this._movementRounding = !!value; }, configurable: true },
-        followerDistance: { get: function() { return this._followerDistance; }, set: function( value ) { this._followerDistance = value; }, configurable: true },
-      } );
-
-      Game_System.prototype.colliderGetPreset = function( id ) {
-        return Collider.getPreset( id );
-      };
-
-      Game_System.prototype.colliderCreateList = function() {
-        return Collider.createList();
-      };
-
-      Game_System.prototype.colliderAddToList = function( list, collider ) {
-        return Collider.addToList( list, collider );
-      };
-
-      Game_System.prototype.colliderCreateCircle = function( x, y, radius ) {
-        return Collider.createCircle( x, y, radius );
-      };
-
-      Game_System.prototype.colliderCreatePolygon = function( vertices ) {
-        return Collider.createPolygon( vertices );
-      };
-
-      Game_System.prototype.colliderCreateRegularPolygon = function( x, y, sx, sy, points ) {
-        return Collider.createRegularPolygon( x, y, sx, sy, points );
-      };
-
-      Game_System.prototype.colliderSharedTile = function() {
-        return Collider.sharedTile();
-      };
-
-      Game_System.prototype.colliderSharedCircle = function() {
-        return Collider.sharedCircle();
-      };
-
-      Game_System.prototype.colliderSharedCharacter = function() {
-        return Collider.sharedCharacter();
-      };
-
-      Game_System.prototype.colliderSharedAirship = function() {
-        return Collider.sharedAirship();
-      };
-
-      Game_System.prototype.colliderSharedShip = function() {
-        return Collider.sharedShip();
-      };
-
-      Game_System.prototype.colliderSharedBoat = function() {
-        return Collider.sharedBoat();
-      };
-
-    } )();
 
   } )();
 
@@ -375,14 +350,32 @@
             case 'set':
               switch ( args[2] ) {
               case 'distance':
-                $gameSystem.followerDistance = Number( args[3] );
+                $gameSystem._followerDistance = Number( args[3] );
                 break;
               }
               break;
             }
             break;
+          case 'move':
+            this.altMovementMoveCharacter( args );
+            break;
+          case 'move_align':
+            switch ( args[1] ) {
+            case 'set':
+              $gameSystem._moveAlignAdjacent = ( args[2] != 'false' );
+              break;
+            }
+            break;
           }
         }
+      };
+
+      var Game_Interpreter_updateWaitMode = Game_Interpreter.prototype.updateWaitMode;
+      Game_Interpreter.prototype.updateWaitMode = function() {
+        if ( 'target' == this._waitMode ) {
+          return this._character._moveTarget;
+        }
+        return Game_Interpreter_updateWaitMode.call( this );
       };
 
     } )();
@@ -392,7 +385,7 @@
      */
     ( function() {
 
-      Game_Interpreter.prototype.altMovementCollider = function( args ) {
+      Game_Interpreter.prototype.altMovementStringArgs = function( args ) {
         var str = args.join( ' ' );
         var args = [];
         var readingPart = false;
@@ -409,6 +402,154 @@
           }
         }
         args.push( part );
+        return args;
+      };
+
+      Game_Interpreter.prototype.altMovementCommandToDirection = function( command ) {
+        var gc = Game_Character;
+        switch ( command ) {
+        case gc.ROUTE_MOVE_DOWN:
+          return 2;
+        case gc.ROUTE_MOVE_LEFT:
+          return 4;
+        case gc.ROUTE_MOVE_RIGHT:
+          return 6;
+        case gc.ROUTE_MOVE_UP:
+          return 8;
+        case gc.ROUTE_MOVE_LOWER_L:
+          return 1;
+        case gc.ROUTE_MOVE_LOWER_R:
+          return 3;
+        case gc.ROUTE_MOVE_UPPER_L:
+          return 7;
+        case gc.ROUTE_MOVE_UPPER_R:
+          return 9;
+        case gc.ROUTE_MOVE_RANDOM:
+          return 1 + Math.randomInt( 8 );
+        case gc.ROUTE_MOVE_FORWARD:
+          return subject._direction;
+        case gc.ROUTE_MOVE_BACKWARD:
+          return subject.reverseDir( subject._direction );
+        default:
+          return 5;
+        }
+      };
+
+      Game_Interpreter.prototype.altMovementCharacterEdgeDxDy = function( subject, dx, dy ) {
+        var stepDistance;
+        var box = subject.collider().aabbox;
+        if ( dx && dy ) {
+          var xd;
+          if ( dx < 0 ) {
+            var px = subject.x + box.left;
+            xd = Math.floor( px ) - px;
+          } else {
+            var px = subject.x + box.right;
+            xd = Math.ceil( px ) - px;
+          }
+          var yd;
+          if ( dy < 0 ) {
+            var py = subject.y + box.top;
+            yd = Math.floor( py ) - py;
+          } else {
+            var py = subject.y + box.bottom;
+            yd = Math.ceil( py ) - py;
+          }
+
+          stepDistance = xd < yd ? xd : yd;
+        } else if ( dx ) {
+          if ( dx < 0 ) {
+            var px = subject.x + box.left;
+            stepDistance = Math.floor( px ) - px;
+          } else {
+            var px = subject.x + box.right;
+            stepDistance = Math.ceil( px ) - px;
+          }
+        } else {
+          if ( dy < 0 ) {
+            var py = subject.y + box.top;
+            stepDistance = Math.floor( py ) - py;
+          } else {
+            var py = subject.y + box.bottom;
+            stepDistance = Math.ceil( py ) - py;
+          }
+        }
+        return stepDistance;
+      };
+
+      Game_Interpreter.prototype.altMovementProcessMoveCommand = function( subject, command, distance, options, object ) {
+        $gameMap.refreshIfNeeded();
+        this._character = subject;
+        if ( options.wait ) {
+          this.setWaitMode( 'target' );
+        }
+        subject._moveTargetSkippable = options.skip;
+        subject._moveTarget = true;
+
+        if ( object ) {
+          var dx = object.x - subject.x;
+          var dy = object.y - subject.y;
+          var length = Math.sqrt( dx * dx + dy * dy );
+          dx /= length;
+          dy /= length;
+
+          var stepDistance;
+          if ( 'edge' == distance ) {
+            stepDistance = this.altMovementCharacterEdgeDxDy( subject, dx, dy );
+          } else {
+            stepDistance = Number( distance );
+          }
+
+          if ( command == Game_Character.ROUTE_MOVE_AWAY ) {
+            stepDistance *= -1;
+          }
+
+          subject._moveTargetX = subject.x + dx * stepDistance;
+          subject._moveTargetY = subject.y + dy * stepDistance;
+        } else {
+          var direction = this.altMovementCommandToDirection( command );
+          var dx = Direction.isLeft( direction ) ? -1 : ( Direction.isRight( direction ) ? 1 : 0 );
+          var dy = Direction.isUp( direction ) ? -1 : ( Direction.isDown( direction ) ? 1 : 0 );
+
+          var stepDistance;
+          if ( 'edge' == distance ) {
+            stepDistance = this.altMovementCharacterEdgeDxDy( subject, dx, dy );
+          } else {
+            stepDistance = Number( distance );
+          }
+
+          subject._moveTargetX = subject.x + dx * stepDistance;
+          subject._moveTargetY = subject.y + dy * stepDistance;
+        }
+      };
+
+      Game_Interpreter.prototype.altMovementMoveCharacter = function( args ) {
+        args = this.altMovementStringArgs( args );
+
+        var subject = this.altMovementGetTargetCharacter( args[1] );
+        var command = this.altMovementGetMoveCommand( args[2] );
+        switch ( command ) {
+        case Game_Character.ROUTE_MOVE_AWAY:
+        case Game_Character.ROUTE_MOVE_TOWARD:
+          var object = this.altMovementGetTargetCharacter( args[3] );
+          var options = {
+            wait: args[5] == 'wait' || args[6] == 'wait',
+            skip: args[5] == 'skip' || args[6] == 'skip' || args[5] == 'skippable' || args[6] == 'skippable',
+          };
+          this.altMovementProcessMoveCommand( subject, command, args[4], options, object );
+          break;
+        default:
+          var options = {
+            wait: args[4] == 'wait' || args[5] == 'wait',
+            skip: args[4] == 'skip' || args[5] == 'skip' || args[4] == 'skippable' || args[5] == 'skippable',
+          };
+          this.altMovementProcessMoveCommand( subject, command, args[3], options );
+          break;
+        }
+      };
+
+      Game_Interpreter.prototype.altMovementCollider = function( args ) {
+        args = this.altMovementStringArgs( args );
 
         switch ( args[1] ) {
         case 'set':
@@ -428,6 +569,47 @@
           target.setCollider( Collider.getPreset( args[3].substring( 1, args[3].length - 1 ) ) );
         } else {
           target.setCollider( Collider.getPreset( presetIndex ) );
+        }
+      };
+
+      Game_Interpreter.prototype.altMovementGetMoveCommand = function( cmdStr ) {
+        switch ( cmdStr ) {
+        case 'down_left': case 'bottom_left': case 'lower_left': case 'lower_l':
+        case 'left_down': case 'left_bottom': case 'left_lower': case 'l_lower':
+        case 'south_west': case 'west_south': case '1':
+          return Game_Character.ROUTE_MOVE_LOWER_L;
+        case 'down': case 'bottom': case 'lower': case 'south': case '2':
+          return Game_Character.ROUTE_MOVE_DOWN;
+        case 'down_right': case 'bottom_right': case 'lower_right': case 'lower_r':
+        case 'right_down': case 'right_bottom': case 'right_lower': case 'r_lower':
+        case 'south_east': case 'east_south': case '3':
+          return Game_Character.ROUTE_MOVE_LOWER_R;
+        case 'left': case 'west': case '4':
+          return Game_Character.ROUTE_MOVE_LEFT;
+        case 'right': case 'east': case '6':
+          return Game_Character.ROUTE_MOVE_RIGHT;
+        case 'up_left': case 'top_left': case 'upper_left': case 'upper_l':
+        case 'left_up': case 'left_top': case 'left_upper': case 'l_upper':
+        case 'north_west': case 'west_north': case '7':
+          return Game_Character.ROUTE_MOVE_UPPER_L;
+        case 'up': case 'top': case 'upper': case 'north': case '8':
+          return Game_Character.ROUTE_MOVE_UP;
+        case 'up_right': case 'top_right': case 'upper_right': case 'upper_r':
+        case 'right_up': case 'right_top': case 'right_upper': case 'r_upper':
+        case 'north_east': case 'east_north': case '9':
+          return Game_Character.ROUTE_MOVE_UPPER_R;
+        case 'away': case 'away_from':
+          return Game_Character.ROUTE_MOVE_AWAY;
+        case 'toward': case 'towards': case 'toward_to':
+          return Game_Character.ROUTE_MOVE_TOWARD;
+        case 'forward': case 'forwards':
+          return Game_Character.ROUTE_MOVE_FORWARD;
+        case 'backward': case 'backwards': case 'back':
+          return Game_Character.ROUTE_MOVE_BACKWARD;
+        case 'random': case 'randomly':
+          return Game_Character.ROUTE_MOVE_RANDOM;
+        default:
+          return null;
         }
       };
 
@@ -945,7 +1127,13 @@
           Game_Character_processMoveCommand.call( this, command );
           break;
         }
-        if ( this._moveTarget && $gameSystem._movementRounding ) {
+
+        if ( $gameSystem._staticMoveAlignAdjacent !== MOVE_ROUTE.ALIGN_ADJACENT ) {
+          $gameSystem._staticMoveAlignAdjacent = MOVE_ROUTE.ALIGN_ADJACENT;
+          $gameSystem._moveAlignAdjacent = MOVE_ROUTE.ALIGN_ADJACENT;
+        }
+
+        if ( this._moveTarget && $gameSystem._moveAlignAdjacent ) {
           this._moveTargetX = Math.round( this._moveTargetX );
           this._moveTargetY = Math.round( this._moveTargetY );
         }
@@ -2198,7 +2386,7 @@
       }
 
       var cacheName = 'cache_mesh%1'.format( mapId.padZero( 3 ) );
-      if ( ( !PLAY_TEST.COLLISION_MESH_CACHING && $gameTemp.isPlaytest() ) && StorageManager.exists( cacheName ) ) {
+      if ( ( PLAY_TEST.COLLISION_MESH_CACHING && $gameTemp.isPlaytest() ) && StorageManager.exists( cacheName ) ) {
         CollisionMesh.meshInMemory.mapId = mapId;
         CollisionMesh.meshInMemory.mesh = JsonEx.parse( StorageManager.load( cacheName ) );
       } else {
