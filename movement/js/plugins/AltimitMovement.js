@@ -1598,6 +1598,10 @@
       };
 
       Game_Follower.prototype.chaseCharacter = function( character ) {
+        if ( this._moveTarget ) {
+          return;
+        }
+
         var screenRadius = Math.sqrt( Graphics.width * Graphics.width + Graphics.height * Graphics.height ) / 2;
         screenRadius /= Math.sqrt( $gameMap.tileWidth() * $gameMap.tileWidth() + $gameMap.tileHeight() * $gameMap.tileHeight() ) / 2;
 
