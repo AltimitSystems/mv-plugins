@@ -497,15 +497,19 @@
           var length = Math.sqrt( dx * dx + dy * dy );
           if ( length <= this.stepDistance ) {
             this._moveTarget = false;
+            this._moveTargetSkippable = false;
             this._x = $gameMap.roundX( this._moveTargetX );
             this._y = $gameMap.roundY( this._moveTargetY );
           } else {
             dx /= length;
             dy /= length;
             this.moveVector( dx * this.stepDistance, dy * this.stepDistance );
-            if ( !this.isMovementSucceeded() && !!this._moveRoute && this._moveRoute.skippable ) {
-              this._moveTarget = false;
-              this.setDirectionFix( this._willUnfixDirection );
+            if ( !this.isMovementSucceeded() ) {
+              if ( this._moveTargetSkippable || ( !!this._moveRoute && this._moveRoute.skippable ) ) {
+                this._moveTarget = false;
+                this._moveTargetSkippable = false;
+                this.setDirectionFix( this._willUnfixDirection );
+              }
             }
           }
         }
@@ -830,12 +834,17 @@
       };
 
       Game_Character.prototype.moveRandom = function() {
+        if ( this._moveTarget ) {
+          return;
+        }
+
         var d = 1 + Math.randomInt( 8 );
         var vx = Direction.isLeft( d ) ? -1 : ( Direction.isRight( d ) ? 1 : 0 );
         var vy = Direction.isUp( d ) ? -1 : ( Direction.isDown( d ) ? 1 : 0 );
         if ( $gameMap.canWalk( this, this.x + vx, this.y + vy ) ) {
           this.setDirectionVector( vx, vy );
           this._moveTarget = true;
+          this._moveTargetSkippable = true;
           this._moveTargetX = Math.round( this.x + vx );
           this._moveTargetY = Math.round( this.y + vy );
         }
@@ -850,6 +859,7 @@
           vx /= length;
           vy /= length;
           this._moveTarget = true;
+          this._moveTargetSkippable = true;
           this._moveTargetX = Math.round( this.x + vx );
           this._moveTargetY = Math.round( this.y + vy );
         }
@@ -863,6 +873,7 @@
         vx /= length;
         vy /= length;
         this._moveTarget = true;
+        this._moveTargetSkippable = true;
         this._moveTargetX = Math.round( this.x - vx );
         this._moveTargetY = Math.round( this.y - vy );
       };
@@ -971,6 +982,7 @@
       Game_Player.prototype.clearTransferInfo = function() {
         Game_Player_clearTransferInfo.call( this );
         this._moveTarget = false;
+        this._moveTargetSkippable = false;
       };
 
       Game_Player.prototype.update = function( sceneActive ) {
