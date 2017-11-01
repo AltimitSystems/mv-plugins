@@ -742,7 +742,8 @@
           }
         }
 
-        if ( move.x || move.y ) {
+        var length = Math.sqrt( move.x * move.x + move.y * move.y );
+        if ( length > Collider.I_PRECISION ) {
           this._x = $gameMap.roundX( this._x + move.x );
           this._y = $gameMap.roundY( this._y + move.y );
 
@@ -841,13 +842,12 @@
         var d = 1 + Math.randomInt( 8 );
         var vx = Direction.isLeft( d ) ? -1 : ( Direction.isRight( d ) ? 1 : 0 );
         var vy = Direction.isUp( d ) ? -1 : ( Direction.isDown( d ) ? 1 : 0 );
-        if ( $gameMap.canWalk( this, this.x + vx, this.y + vy ) ) {
-          this.setDirectionVector( vx, vy );
-          this._moveTarget = true;
-          this._moveTargetSkippable = true;
-          this._moveTargetX = Math.round( this.x + vx );
-          this._moveTargetY = Math.round( this.y + vy );
-        }
+
+        this.setDirectionVector( vx, vy );
+        this._moveTarget = true;
+        this._moveTargetSkippable = true;
+        this._moveTargetX = Math.round( this.x + vx );
+        this._moveTargetY = Math.round( this.y + vy );
       };
 
       Game_Character.prototype.moveTowardCharacter = function( character ) {
