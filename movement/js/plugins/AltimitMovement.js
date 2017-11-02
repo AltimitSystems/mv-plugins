@@ -2548,6 +2548,117 @@
         }
       }
 
+      // TileD colliders
+      if ( gameMap.tiledData ) {
+        var scale = ( gameMap.isHalfTile && gameMap.isHalfTile() ) ? 2 : 1;
+        var tilesetColliders = [];
+
+        // Build colliders
+        var tilesets = gameMap.tiledData.tilesets;
+        for ( var ii = 0; ii < tilesets.length; ii++ ) {
+          tilesetColliders[ii] = {};
+
+          var tiles = tilesets[ii].tiles;
+          for ( var key in tiles ) {
+            if ( tiles[key].objectgroup ) {
+              tilesetColliders[ii][key] = tiles[key].objectgroup.objects;
+            }
+          }
+        }
+
+        var tileWidth = gameMap.tileWidth();
+        var tileHeight = gameMap.tileHeight();
+
+        // Place colliders
+        for ( var ii = 0; ii < gameMap.tiledData.layers.length; ii++ ) {
+          var layer = gameMap.tiledData.layers[ii];
+          for ( var yy = 0; yy < layer.height; yy++ ) {
+            var row = yy * layer.width;
+            for ( var xx = 0; xx < layer.width; xx++ ) {
+              var tileId = layer.data[row + xx];
+              if ( tileId === 0 ) {
+                continue;
+              }
+              tileId++;
+
+              // Find tileset belonging to tileId
+              var tilesetId = -1;
+              var firstId = 0;
+              for ( var jj = 0; jj < gameMap.tiledData.tilesets.length; jj++ ) {
+                firstId = gameMap.tiledData.tilesets[jj].firstgid;
+                var lastId = firstId + gameMap.tiledData.tilesets[jj].tilecount;
+                if ( tileId >= firstId && tileId <= lastId ) {
+                  tilesetId = jj;
+                  break;
+                }
+              }
+              if ( tilesetId < 0 ) {
+                continue;
+              }
+
+              // Get objectGroup for this tileId
+              var tileSet = tilesetColliders[tilesetId];
+              var objectGroup = tileSet['' + ( tileId - firstId - 1 )];
+              if ( objectGroup ) {
+                for ( var jj = 0; jj < objectGroup.length; jj++ ) {
+                  var object = objectGroup[jj];
+                  var x = xx * scale;
+                  var y = yy * scale;
+                  x += object.x / tileWidth;
+                  y += object.y / tileHeight;
+                  if ( object.polygon ) {
+                    // Polygon
+                    var polygon = [];
+                    for ( var kk = 0; kk < object.polygon.length; kk++ ) {
+                      polygon[kk] = [
+                        x + ( object.polygon[kk].x / tileWidth ),
+                        y + ( object.polygon[kk].y / tileHeight )
+                      ];
+                    }
+                    colliders.push( Collider.createPolygon( polygon ) );
+                  } else if ( object.polyline ) {
+                    // Polyline
+                    var polylines;
+                    if ( object.polyline.length == 2 ) {
+                      polylines = Collider.createPolygon( [
+                        [x + ( object.polyline[0].x / tileWidth ), y + ( object.polyline[0].y / tileWidth )],
+                        [x + ( object.polyline[1].x / tileHeight ), y + ( object.polyline[1].y / tileHeight )]
+                      ] );
+                    } else {
+                      polylines = Collider.createList();
+                      for ( var kk = 0; kk < ( object.polyline.length - 1 ); kk++ ) {
+                        Collider.addToList( polylines, Collider.createPolygon( [
+                          [x + ( object.polyline[kk].x / tileWidth ), y + ( object.polyline[kk].y / tileWidth )],
+                          [x + ( object.polyline[kk + 1].x / tileHeight ), y + ( object.polyline[kk + 1].y / tileHeight )]
+                        ] ) );
+                      }
+                    }
+                    colliders.push( polylines );
+                  } else if ( object.ellipse ) {
+                    // Ellipse
+                    if ( object.width == object.height ) {
+                      // Circle
+                      var rad = ( object.width / tileWidth ) / 2;
+                      colliders.push( Collider.createCircle( x + rad, y + rad, rad ) );
+                    } else {
+                      // Regular polygon
+                      var rx = ( object.width / tileWidth ) / 2;
+                      var ry = ( object.height / tileHeight ) / 2;
+                      colliders.push( Collider.createRegularPolygon( x + rx, y + ry, rx, ry, 8 ) );
+                    }
+                  } else {
+                    // Rect
+                    var w = object.width / tileWidth;
+                    var h = object.height / tileHeight;
+                    colliders.push( Collider.createRect( x, y, w, h ) );
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
       // We sort the horizontal and vertical lines separately as we check
       // map collision in two stages: horizontal then vertical
       var collisionMesh = Collider.createList();
