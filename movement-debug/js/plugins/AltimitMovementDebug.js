@@ -28,7 +28,7 @@
 
 /*:
  * @plugindesc Debug display layer for AltimitMovement
- * @author Altimit Systems LTD
+ * @author Altimit Community Contributors
  *
  * @param default_display
  * @text Default display
@@ -259,7 +259,7 @@
         context.beginPath();
         if ( collider.type == 0 ) {
           // Circle type
-          context.arc( x + collider.x * tw, y + collider.y * th, collider.radius * 48, 0, Math.PI * 2, false );
+          context.arc( x + collider.x * tw, y + collider.y * th, collider.radius * ( tw + th ) / 2, 0, Math.PI * 2, false );
         } else if ( collider.type == 1 ) {
           context.moveTo( x + collider.vertices[0][0] * tw, y + collider.vertices[0][1] * th );
           for ( var ii = 1; ii < collider.vertices.length; ii++ ) {
