@@ -2497,22 +2497,25 @@
       }
 
       var colliders = [];
+      var d = 2;
 
       // Non-looping sides
       if ( !gameMap.isLoopHorizontal() ) {
+        var q = gameMap.isLoopVertical() ? 0 : d;
         colliders.push( Collider.createPolygon(
-          [ [ 0, gameMap.height() ], [ 0, 0 ] ]
+          [ [ 0, 0 ], [ 0, gameMap.height() ], [ -d, gameMap.height() + q ] , [ -d, -q ]  ]
         ) );
         colliders.push( Collider.createPolygon(
-          [ [ gameMap.width(), 0 ], [ gameMap.width(), gameMap.height() ] ]
+          [ [ gameMap.width(), gameMap.height() ], [ gameMap.width(), 0 ], [ gameMap.width() + d, -q ], [ gameMap.width() + d, gameMap.height() + q ] ]
         ) );
       }
       if ( !gameMap.isLoopVertical() ) {
+        var q = gameMap.isLoopHorizontal() ? 0 : d;
         colliders.push( Collider.createPolygon(
-          [ [ gameMap.width(), 0 ], [ 0, 0 ] ]
+          [ [ gameMap.width(), 0 ], [ 0, 0 ], [ -q, -d ], [ gameMap.width() + q, -d ] ]
         ) );
         colliders.push( Collider.createPolygon(
-          [ [ 0, gameMap.height() ], [ gameMap.width(), gameMap.height() ] ]
+          [ [ 0, gameMap.height() ], [ gameMap.width(), gameMap.height() ], [ gameMap.width() + q, gameMap.height() + d ], [ -q, gameMap.height() + d ] ]
         ) );
       }
 
@@ -2561,6 +2564,7 @@
         for ( var xx = 0; xx < gameMap.width(); xx++ ) {
           var y2 = gameMap.roundY( yy - 1 );
           if ( ( collisionGrid[xx][yy] & ( 0x1 << 0 ) || ( y2 >= 0 && collisionGrid[xx][y2] & ( 0x1 << 2 ) ) ) ) {
+            // Can't move up or down
             // Is a horizontal line
             if ( !horizontalLine ) {
               horizontalLine = [[xx, yy]];
@@ -2568,11 +2572,13 @@
             horizontalLine[1] = [xx + 1, yy];
           } else if ( !!horizontalLine ) {
             hColliders.push( Collider.createPolygon( horizontalLine ) );
+            // hColliders.push( Collider.createPolygon( [[horizontalLine[1][0], horizontalLine[1][1]], [horizontalLine[0][0], horizontalLine[0][1]]] ) );
             horizontalLine = null;
           }
         }
         if ( !!horizontalLine ) {
           hColliders.push( Collider.createPolygon( horizontalLine ) );
+          // hColliders.push( Collider.createPolygon( [[horizontalLine[1][0], horizontalLine[1][1]], [horizontalLine[0][0], horizontalLine[0][1]]] ) );
           horizontalLine = null;
         }
       }
@@ -2584,6 +2590,7 @@
         for ( var yy = 0; yy < gameMap.height(); yy++ ) {
           var x2 = gameMap.roundX( xx - 1 );
           if ( ( collisionGrid[xx][yy] & ( 0x1 << 1 ) || ( x2 >= 0 && collisionGrid[x2][yy] & ( 0x1 << 3 ) ) ) ) {
+            // Can't move left or right
             // Is a vertical line
             if ( !verticalLine ) {
               verticalLine = [[xx, yy]];
@@ -2591,11 +2598,13 @@
             verticalLine[1] = [xx, yy + 1];
           } else if ( !!verticalLine ) {
             vColliders.push( Collider.createPolygon( verticalLine ) );
+            // vColliders.push( Collider.createPolygon( [[verticalLine[1][0], verticalLine[1][1]], [verticalLine[0][0], verticalLine[0][1]]] ) );
             verticalLine = null;
           }
         }
         if ( !!verticalLine ) {
           vColliders.push( Collider.createPolygon( verticalLine ) );
+          // vColliders.push( Collider.createPolygon( [[verticalLine[1][0], verticalLine[1][1]], [verticalLine[0][0], verticalLine[0][1]]] ) );
           verticalLine = null;
         }
       }
