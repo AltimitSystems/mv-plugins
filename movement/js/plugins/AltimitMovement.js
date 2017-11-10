@@ -1436,8 +1436,13 @@
         }
       };
 
-      Game_Player.prototype.moveStraight = Game_Character.prototype.moveStraight;
-      Game_Player.prototype.moveDiagonally = Game_Character.prototype.moveDiagonally;
+      Game_Player.prototype.moveStraight = function( d ) {
+        Game_Character.prototype.moveStraight.call( this, d );
+      };
+
+      Game_Player.prototype.moveDiagonally = function( horz, vert ) {
+        Game_Character.prototype.moveDiagonally.call( this, horz, vert );
+      };
 
       Game_Player.prototype.getOnVehicle = function() {
         var vx = Direction.isLeft( this._direction ) ? -0.5 : ( Direction.isRight( this._direction ) ? 0.5 : 0 );
