@@ -135,6 +135,36 @@
  *
  * @param
  *
+ * @param input_config
+ * @text Input config
+ * @desc Configuration for input method.
+ *
+ * @param input_config_enable_touch_mouse
+ * @text Use touch/mouse?
+ * @desc Enables pointer-based input.
+ * @parent input_config
+ * @type boolean
+ * @on Yes
+ * @off No
+ * @default true
+ *
+ * @param input_config_gamepad_mode
+ * @text Gamepad mode
+ * @desc Gamepad analogue stick input control.
+ * @parent input_config
+ * @type select
+ * @option Movement + Facing
+ * @value 3
+ * @option Movement only
+ * @value 2
+ * @option Facing only
+ * @value 1
+ * @option Disabled
+ * @value 0
+ * @default 3
+ *
+ * @param
+ *
  * @param play_test
  * @text Play-testing
  * @desc Parameters when running in Play-test mode.
@@ -163,6 +193,8 @@
  *   AltMovement collider set follower2 "baz"         # Follower 2 collider to preset "baz"
  *
  *   AltMovement followers set distance 0.5           # Sets follower distance to 0.5 units
+ *   AltMovement followers set 0 following false      # Stops follower 0 from following
+ *   AltMovement followers set 1 following            # Enables follower 1 following
  *
  *   AltMovement move_align set false                 # Sets move route adjacent alignment to false
  *
@@ -175,17 +207,23 @@
  *   AltMovement move airship random 6.5              # Moves airship in random direction 6.5 units
  *   AltMovement move this forward 1 skip             # Moves current event forward 1 unit
  *
+ *   AltMovement input touch disable                  # Disables touch/mouse input
+ *   AltMovement input mouse enable                   # Enables touch/mouse input
+ *
  * Usage:
  *  Plugin will automatically apply when ON.
  *
  * About:
- *  Version 0.30 Beta
+ *  Version 0.40 Beta
  *  Website https://github.com/AltimitSystems/mv-plugins/tree/master/movement
  */
 ( function() {
 
   var DOM_PARSER = new DOMParser();
   var PARAMETERS = PluginManager.parameters( 'AltimitMovement' );
+
+  var GAME_PAD_THRESHOLD = 1 / 5;
+  var GAME_PAD_LIMIT = 1 - GAME_PAD_THRESHOLD;
 
   /**
    * PLAYER
@@ -297,6 +335,11 @@
     ALIGN_GRID: ( PARAMETERS['move_route_align_grid'] != 'false' ),
   };
 
+  var INPUT_CONFIG = {
+    ENABLE_TOUCH_MOUSE: ( PARAMETERS['input_config_enable_touch_mouse'] != 'false' ),
+    GAMEPAD_MODE: parseInt( PARAMETERS['input_config_gamepad_mode'] ),
+  };
+
   var PLAY_TEST = {
     COLLISION_MESH_CACHING: ( PARAMETERS['play_test_collision_mesh_caching'] != 'false' ),
   };
@@ -321,6 +364,9 @@
 
        this._staticFollowerDistance = FOLLOWERS.DISTANCE;
        this._followerDistance = FOLLOWERS.DISTANCE;
+
+       this._staticEnableTouchMouse = INPUT_CONFIG.ENABLE_TOUCH_MOUSE;
+       this._enableTouchMouse = INPUT_CONFIG.ENABLE_TOUCH_MOUSE;
      };
 
    } )();
@@ -352,6 +398,31 @@
               case 'distance':
                 $gameSystem._followerDistance = Number( args[3] );
                 break;
+              default:
+                var index = parseInt( args[2] );
+                switch ( args[3] ) {
+                case 'following':
+                  if ( args[4] ) {
+                    switch ( args[4].toLowerCase() ) {
+                    case 'disable':
+                    case 'off':
+                    case 'false':
+                    case 'no':
+                      $gamePlayer.followers().follower( index ).setFrozen( true );
+                      break;
+                    case 'enable':
+                    case 'on':
+                    case 'true':
+                    case 'yes':
+                      $gamePlayer.followers().follower( index ).setFrozen( false );
+                      break;
+                    }
+                  } else {
+                    $gamePlayer.followers().follower( index ).setFrozen( false );
+                  }
+                  break;
+                }
+                break;
               }
               break;
             }
@@ -362,8 +433,42 @@
           case 'move_align':
             switch ( args[1] ) {
             case 'set':
-              $gameSystem._moveAlignGrid = ( args[2] != 'false' );
+              switch ( args[2].toLowerCase() ) {
+              case 'disable':
+              case 'off':
+              case 'false':
+              case 'no':
+                $gameSystem._moveAlignGrid = false;
+                break;
+              case 'enable':
+              case 'on':
+              case 'true':
+              case 'yes':
+                $gameSystem._moveAlignGrid = true;
+                break;
+              }
               break;
+            }
+            break;
+          case 'input':
+            switch ( args[1] ) {
+              case 'touch':
+              case 'mouse':
+                switch ( args[2].toLowerCase() ) {
+                case 'disable':
+                case 'off':
+                case 'false':
+                case 'no':
+                  $gameSystem._enableTouchMouse = false;
+                  break;
+                case 'enable':
+                case 'on':
+                case 'true':
+                case 'yes':
+                  $gameSystem._enableTouchMouse = true;
+                  break;
+                }
+                break;
             }
             break;
           }
@@ -959,6 +1064,29 @@
       };
 
       Game_CharacterBase.prototype.setDirectionVector = function( vx, vy ) {
+        var direction = Math.atan2( vy, vx ) / Math.PI;
+        if ( direction >= -0.2 && direction < 0.2 ) {
+          // East
+          this.setDirection( Direction.RIGHT );
+          return;
+        } else if ( direction >= 0.3 && direction < 0.7 ) {
+          // South
+          this.setDirection( Direction.DOWN );
+          return;
+        } else if ( direction >= -0.7 && direction < -0.3 ) {
+          // North
+          this.setDirection( Direction.UP );
+          return;
+        } else if ( direction >= -1.2 && direction < -0.8 ) {
+          // West
+          this.setDirection( Direction.LEFT );
+          return;
+        } else if ( direction >= 0.8 && direction < 1.2 ) {
+          // West
+          this.setDirection( Direction.LEFT );
+          return;
+        }
+
         var dx = vx > 0 ? Direction.RIGHT : ( vx ? Direction.LEFT : 0 );
         var dy = vy > 0 ? Direction.DOWN : ( vy ? Direction.UP : 0 );
         if ( dx && dy ) {
@@ -1203,16 +1331,63 @@
       };
 
       Game_Player.prototype.moveByInput = function() {
+        if ( $gameSystem._staticEnableTouchMouse != INPUT_CONFIG.ENABLE_TOUCH_MOUSE ) {
+          $gameSystem._staticEnableTouchMouse = INPUT_CONFIG.ENABLE_TOUCH_MOUSE;
+          $gameSystem._enableTouchMouse = INPUT_CONFIG.ENABLE_TOUCH_MOUSE;
+        }
+
         if ( this._moveTarget ) {
           this._touchTarget = false;
         }
 
         if ( !this.isMoving() && this.canMove() ) {
+          if ( navigator.getGamepads ) {
+            var gamepads = navigator.getGamepads();
+            var didMove = false;
+            var didTurn = false;
+            if ( gamepads ) {
+              for ( var ii = 0; ii < gamepads.length; ii++ ) {
+                var gamepad = gamepads[ii];
+                if ( gamepad && gamepad.connected ) {
+                  if ( !didMove ) {
+                    if ( INPUT_CONFIG.GAMEPAD_MODE & 0x2 ) {
+                      var vy = gamepad.axes[1];
+                      var vx = gamepad.axes[0];
+                      var length = Math.sqrt( vy * vy + vx * vx );
+                      if ( length > GAME_PAD_THRESHOLD ) {
+                        if ( length - GAME_PAD_THRESHOLD > GAME_PAD_LIMIT ) {
+                          vx /= length;
+                          vy /= length;
+                        }
+                        this.moveVector( vx * this.stepDistance, vy * this.stepDistance );
+                        didMove = true;
+                      }
+                    } else {
+                      didMove = true;
+                    }
+                  }
+                  if ( !didTurn && ( INPUT_CONFIG.GAMEPAD_MODE & 0x1 ) ) {
+                    var vy = gamepad.axes[3];
+                    var vx = gamepad.axes[2];
+                    var length = Math.sqrt( vy * vy + vx * vx );
+                    if ( length > GAME_PAD_THRESHOLD ) {
+                      this.setDirectionVector( vx, vy );
+                      didTurn = true;
+                    }
+                  }
+                }
+              }
+            }
+            if ( didMove ) {
+              return;
+            }
+          }
+
           var direction = this.getInputDirection();
           if ( direction > 0 ) {
             this.executeMove( direction );
             this._touchTarget = false;
-          } else if ( $gameTemp.isDestinationValid() ) {
+          } else if ( $gameSystem._enableTouchMouse && $gameTemp.isDestinationValid() ) {
             var aabbox = this.collider().aabbox;
 
             if ( this.isInVehicle() ) {
@@ -1608,10 +1783,11 @@
       Game_Follower.prototype.initMembers = function() {
         Game_Follower_initMembers.call( this );
         this._collider = Collider.createFromXML( FOLLOWERS.COLLIDER_LIST );
+        this._isFrozen = false;
       };
 
       Game_Follower.prototype.chaseCharacter = function( character ) {
-        if ( this._moveTarget ) {
+        if ( this._moveTarget || this._isFrozen ) {
           return;
         }
 
@@ -1686,6 +1862,17 @@
             this.setDirectionVector( 0, dy );
           }
         }
+      };
+
+    } )();
+
+    /**
+     * Extensions
+     */
+    ( function() {
+
+      Game_Follower.prototype.setFrozen = function( frozen ) {
+        this._isFrozen = frozen;
       };
 
     } )();
