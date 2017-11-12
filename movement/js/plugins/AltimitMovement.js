@@ -196,7 +196,7 @@
  *   AltMovement followers set 0 following false      # Stops follower 0 from following
  *   AltMovement followers set 1 following            # Enables follower 1 following
  *
- *   AltMovement move_align set false                 # Sets move route adjacent alignment to false
+ *   AltMovement move_align set false                 # Sets move route grid alignment to false
  *
  *   AltMovement move "foo bar" up 0.1                # Moves event named "foo bar" up 0.1 units
  *   AltMovement move 2 east 1 wait skip              # Moves event ID 2 east 1 unit, wait and skip
