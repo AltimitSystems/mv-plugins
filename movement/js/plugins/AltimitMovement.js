@@ -867,12 +867,19 @@
           var aabbox = this.collider().aabbox;
           move = { x: 0, y: 0 };
 
-          var rx = $gameMap.roundX( this._x + vx  );
-          if ( $gameMap.isValid( $gameMap.roundX( rx + ( vx < 0 ? aabbox.left : aabbox.right ) ), this._y ) ) {
+          if ( !$gameMap.isLoopHorizontal() && this._x + vx + aabbox.left < 0 ) {
+            move.x = 0 - ( this._x + aabbox.left );
+          } else if ( !$gameMap.isLoopHorizontal() && this._x + vx + aabbox.right > $gameMap.width() ) {
+            move.x = $gameMap.width() - ( this._x + aabbox.right );
+          } else {
             move.x = vx;
           }
-          var ry = $gameMap.roundY( this._y + vy );
-          if ( $gameMap.isValid( this._x, $gameMap.roundY( ry + ( vy < 0 ? aabbox.top : aabbox.bottom ) ) ) ) {
+
+          if ( !$gameMap.isLoopVertical() && this._y + vy + aabbox.top < 0 ) {
+            move.y = 0 - ( this._y + aabbox.top );
+          } else if ( !$gameMap.isLoopVertical() && this._y + vy + aabbox.bottom > $gameMap.height() ) {
+            move.y = $gameMap.height() - ( this._y + aabbox.bottom );
+          } else {
             move.y = vy;
           }
         } else {
@@ -1663,7 +1670,7 @@
             dy /= distance;
           }
 
-          this.setThrough( character.isThrough() || character.isDebugThrough() );
+          this.setThrough( $gamePlayer.isThrough() || $gamePlayer.isDebugThrough() );
           this.moveVector( dx * this.stepDistance, dy * this.stepDistance );
           this.setThrough( true );
         }
@@ -1852,7 +1859,7 @@
           var tiles = $gameMap.getTilesUnder( $gamePlayer, vx, vy );
           var canWalk = true;
           for ( var ii = 0; ii < tiles.length; ii++ ) {
-            if ( !$gameMap.isValid( tiles[ii][0], tiles[ii][1] ) ) {
+            if ( !$gameMap.isAABBoxValid( tiles[ii][0], tiles[ii][1], vehicleBox ) || !$gameMap.isAABBoxValid( tiles[ii][0], tiles[ii][1], passengerBox ) ) {
               canWalk = false;
               break;
             } else if ( !$gameMap.isPassable( tiles[ii][0], tiles[ii][1], reverseDirection ) ) {
@@ -2279,6 +2286,10 @@
         }
 
         return true;
+      };
+
+      Game_Map.prototype.isAABBoxValid = function( x, y, aabbox ) {
+        return aabbox.left + x >= 0 && aabbox.right + x <= this.width() && aabbox.top + y >= 0 && aabbox.bottom + y <= this.height();
       };
 
       Game_Map.prototype.canWalk = function( character, x, y ) {
