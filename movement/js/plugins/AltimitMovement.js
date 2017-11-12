@@ -680,6 +680,7 @@
           if ( length <= this.stepDistance ) {
             this._moveTarget = false;
             this._moveTargetSkippable = false;
+            this.setDirectionFix( this._wasDirectionFixed );
             this._x = $gameMap.roundX( this._moveTargetX );
             this._y = $gameMap.roundY( this._moveTargetY );
           } else {
@@ -690,7 +691,7 @@
               if ( this._moveTargetSkippable || ( !!this._moveRoute && this._moveRoute.skippable ) ) {
                 this._moveTarget = false;
                 this._moveTargetSkippable = false;
-                this.setDirectionFix( this._willUnfixDirection );
+                this.setDirectionFix( this._wasDirectionFixed );
               }
             }
           }
@@ -1106,7 +1107,7 @@
           this._moveTargetY = ( this._y - 1 );
           break;
         case gc.ROUTE_MOVE_FORWARD:
-          this._willUnfixDirection = this.isDirectionFixed();
+          this._wasDirectionFixed = this.isDirectionFixed();
           this.setDirectionFix( true );
           var vx = Direction.isLeft( this._direction ) ? -1 : ( Direction.isRight( this._direction ) ? 1 : 0 );
           var vy = Direction.isUp( this._direction ) ? -1 : ( Direction.isDown( this._direction ) ? 1 : 0 );
@@ -1115,7 +1116,7 @@
           this._moveTargetY = ( this._y + vy );
           break;
         case gc.ROUTE_MOVE_BACKWARD:
-          this._willUnfixDirection = this.isDirectionFixed();
+          this._wasDirectionFixed = this.isDirectionFixed();
           this.setDirectionFix( true );
           var vx = Direction.isLeft( this._direction ) ? -1 : ( Direction.isRight( this._direction ) ? 1 : 0 );
           var vy = Direction.isUp( this._direction ) ? -1 : ( Direction.isDown( this._direction ) ? 1 : 0 );
@@ -1662,7 +1663,7 @@
             dy /= distance;
           }
 
-          this.setThrough( false );
+          this.setThrough( character.isThrough() || character.isDebugThrough() );
           this.moveVector( dx * this.stepDistance, dy * this.stepDistance );
           this.setThrough( true );
         }
