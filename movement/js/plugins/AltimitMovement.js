@@ -1379,6 +1379,7 @@
               }
             }
             if ( didMove ) {
+              this._touchTarget = false;
               return;
             }
           }
