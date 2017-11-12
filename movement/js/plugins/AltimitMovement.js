@@ -124,8 +124,8 @@
  * @text Move route behaviour
  * @desc Parameters related to character move routes.
  *
- * @param move_route_align_adjacent
- * @text Align to adjacent tiles?
+ * @param move_route_align_grid
+ * @text Align move-routes to grid?
  * @desc If character is offset on a tile align them to the tile grid when moving.
  * @parent move_route
  * @type boolean
@@ -294,7 +294,7 @@
   } )();
 
   var MOVE_ROUTE = {
-    ALIGN_ADJACENT: ( PARAMETERS['move_route_align_adjacent'] != 'false' ),
+    ALIGN_GRID: ( PARAMETERS['move_route_align_grid'] != 'false' ),
   };
 
   var PLAY_TEST = {
@@ -316,8 +316,8 @@
        Game_System_initialize.call( this );
        this._eventColliders = [];
 
-       this._staticMoveAlignAdjacent = MOVE_ROUTE.ALIGN_ADJACENT;
-       this._moveAlignAdjacent = MOVE_ROUTE.ALIGN_ADJACENT;
+       this._staticMoveAlignGrid = MOVE_ROUTE.ALIGN_GRID;
+       this._moveAlignGrid = MOVE_ROUTE.ALIGN_GRID;
 
        this._staticFollowerDistance = FOLLOWERS.DISTANCE;
        this._followerDistance = FOLLOWERS.DISTANCE;
@@ -362,7 +362,7 @@
           case 'move_align':
             switch ( args[1] ) {
             case 'set':
-              $gameSystem._moveAlignAdjacent = ( args[2] != 'false' );
+              $gameSystem._moveAlignGrid = ( args[2] != 'false' );
               break;
             }
             break;
@@ -1136,12 +1136,12 @@
           break;
         }
 
-        if ( $gameSystem._staticMoveAlignAdjacent !== MOVE_ROUTE.ALIGN_ADJACENT ) {
-          $gameSystem._staticMoveAlignAdjacent = MOVE_ROUTE.ALIGN_ADJACENT;
-          $gameSystem._moveAlignAdjacent = MOVE_ROUTE.ALIGN_ADJACENT;
+        if ( $gameSystem._staticMoveAlignGrid !== MOVE_ROUTE.ALIGN_GRID ) {
+          $gameSystem._staticMoveAlignGrid = MOVE_ROUTE.ALIGN_GRID;
+          $gameSystem._moveAlignGrid = MOVE_ROUTE.ALIGN_GRID;
         }
 
-        if ( this._moveTarget && $gameSystem._moveAlignAdjacent ) {
+        if ( this._moveTarget && $gameSystem._moveAlignGrid ) {
           this._moveTargetX = Math.round( this._moveTargetX );
           this._moveTargetY = Math.round( this._moveTargetY );
         }
