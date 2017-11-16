@@ -41,6 +41,15 @@
  * @type note
  * @default "<circle cx='0.5' cy='0.7' r='0.25' />"
  *
+ * @param player_circular_movement
+ * @text Normalize the movement?
+ * @desc Should the diagonal movement be the same distance as the straight movement?
+ * @parent player
+ * @type boolean
+ * @on Yes
+ * @off No
+ * @default true
+ *
  * @param
  *
  * @param followers
@@ -62,6 +71,15 @@
  * @parent followers
  * @type note
  * @default "<circle cx='0.5' cy='0.7' r='0.25' />"
+ *
+ * @param followers_circular_movement
+ * @text Normalize the movement?
+ * @desc Should the diagonal movement be the same distance as the straight movement?
+ * @parent followers
+ * @type boolean
+ * @on Yes
+ * @off No
+ * @default true
  *
  * @param
  *
@@ -231,7 +249,9 @@
   var PLAYER;
   ( function() {
 
-    PLAYER = {};
+    PLAYER = {
+      CIRCULAR_MOVEMENT: ( PARAMETERS['player_circular_movement'] != 'false' ),
+    };
 
     var colliderList = PARAMETERS['player_collider_list'];
     if ( colliderList ) {
@@ -250,6 +270,7 @@
 
     FOLLOWERS = {
       DISTANCE: Number( PARAMETERS['followers_distance'] ),
+      CIRCULAR_MOVEMENT: ( PARAMETERS['followers_circular_movement'] != 'false' ),
     };
 
     var colliderList = PARAMETERS['followers_collider_list'];
@@ -356,17 +377,17 @@
 
      var Game_System_initialize = Game_System.prototype.initialize;
      Game_System.prototype.initialize = function() {
-       Game_System_initialize.call( this );
-       this._eventColliders = [];
+        Game_System_initialize.call( this );
+        this._eventColliders = [];
 
-       this._staticMoveAlignGrid = MOVE_ROUTE.ALIGN_GRID;
-       this._moveAlignGrid = MOVE_ROUTE.ALIGN_GRID;
+        this._staticMoveAlignGrid = MOVE_ROUTE.ALIGN_GRID;
+        this._moveAlignGrid = MOVE_ROUTE.ALIGN_GRID;
 
-       this._staticFollowerDistance = FOLLOWERS.DISTANCE;
-       this._followerDistance = FOLLOWERS.DISTANCE;
+        this._staticFollowerDistance = FOLLOWERS.DISTANCE;
+        this._followerDistance = FOLLOWERS.DISTANCE;
 
-       this._staticEnableTouchMouse = INPUT_CONFIG.ENABLE_TOUCH_MOUSE;
-       this._enableTouchMouse = INPUT_CONFIG.ENABLE_TOUCH_MOUSE;
+        this._staticEnableTouchMouse = INPUT_CONFIG.ENABLE_TOUCH_MOUSE;
+        this._enableTouchMouse = INPUT_CONFIG.ENABLE_TOUCH_MOUSE;
      };
 
    } )();
@@ -824,25 +845,25 @@
       };
 
       Game_CharacterBase.prototype.moveStraight = function( d ) {
-        var vy = Direction.isUp( d ) ? -this.stepDistance : ( Direction.isDown( d ) ? this.stepDistance : 0 );
-        var vx = Direction.isLeft( d ) ? -this.stepDistance : ( Direction.isRight( d ) ? this.stepDistance : 0 );
+        var vy = Direction.isUp( d ) ? -1 : ( Direction.isDown( d ) ? 1 : 0 );
+        var vx = Direction.isLeft( d ) ? -1 : ( Direction.isRight( d ) ? 1 : 0 );
         if ( this._circularMovement ) {
-          var vector = Direction.normalize( vx, vy );
-          this.moveVector( vector.x, vector.y );
-        } else {
-          this.moveVector( vx, vy );
+          var length = Math.sqrt( vx * vx + vy * vy );
+          vx /= length;
+          vy /= length;
         }
+        this.moveVector( vx * this.stepDistance, vy * this.stepDistance );
       };
 
       Game_CharacterBase.prototype.moveDiagonally = function( horz, vert ) {
-        var vy = Direction.isUp( vert ) ? -this.stepDistance : ( Direction.isDown( vert ) ? this.stepDistance : 0 );
-        var vx = Direction.isLeft( horz ) ? -this.stepDistance : ( Direction.isRight( horz ) ? this.stepDistance : 0 );
+        var vy = Direction.isUp( vert ) ? -1 : ( Direction.isDown( vert ) ? 1 : 0 );
+        var vx = Direction.isLeft( horz ) ? -1 : ( Direction.isRight( horz ) ? 1 : 0 );
         if ( this._circularMovement ) {
-          var vector = Direction.normalize( vx, vy );
-          this.moveVector( vector.x, vector.y );
-        } else {
-          this.moveVector( vx, vy );
+          var length = Math.sqrt( vx * vx + vy * vy );
+          vx /= length;
+          vy /= length;
         }
+        this.moveVector( vx * this.stepDistance, vy * this.stepDistance );
       };
 
       Game_CharacterBase.prototype.isMoving = function() {
@@ -1312,6 +1333,7 @@
       Game_Player.prototype.initMembers = function() {
         Game_Player_initMembers.call(this);
         this._collider = Collider.createFromXML( PLAYER.COLLIDER_LIST );
+        this._circularMovement = PLAYER.CIRCULAR_MOVEMENT;
       };
 
       Game_Player.prototype.checkEventTriggerTouch = Game_CharacterBase.prototype.checkEventTriggerTouch;
@@ -1814,6 +1836,7 @@
         Game_Follower_initMembers.call( this );
         this._collider = Collider.createFromXML( FOLLOWERS.COLLIDER_LIST );
         this._isFrozen = false;
+        this._circularMovement = FOLLOWERS.CIRCULAR_MOVEMENT;
       };
 
       Game_Follower.prototype.chaseCharacter = function( character ) {
