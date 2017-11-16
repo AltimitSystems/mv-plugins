@@ -826,13 +826,23 @@
       Game_CharacterBase.prototype.moveStraight = function( d ) {
         var vy = Direction.isUp( d ) ? -this.stepDistance : ( Direction.isDown( d ) ? this.stepDistance : 0 );
         var vx = Direction.isLeft( d ) ? -this.stepDistance : ( Direction.isRight( d ) ? this.stepDistance : 0 );
-        this.moveVector( vx, vy );
+        if ( this._circularMovement ) {
+          var vector = Direction.normalize( vx, vy );
+          this.moveVector( vector.x, vector.y );
+        } else {
+          this.moveVector( vx, vy );
+        }
       };
 
       Game_CharacterBase.prototype.moveDiagonally = function( horz, vert ) {
         var vy = Direction.isUp( vert ) ? -this.stepDistance : ( Direction.isDown( vert ) ? this.stepDistance : 0 );
         var vx = Direction.isLeft( horz ) ? -this.stepDistance : ( Direction.isRight( horz ) ? this.stepDistance : 0 );
-        this.moveVector( vx, vy );
+        if ( this._circularMovement ) {
+          var vector = Direction.normalize( vx, vy );
+          this.moveVector( vector.x, vector.y );
+        } else {
+          this.moveVector( vx, vy );
+        }
       };
 
       Game_CharacterBase.prototype.isMoving = function() {
@@ -1368,7 +1378,12 @@
                           vx /= length;
                           vy /= length;
                         }
-                        this.moveVector( vx * this.stepDistance, vy * this.stepDistance );
+                        if ( this._circularMovement ) {
+                          this.moveVector( vx * this.stepDistance, vy * this.stepDistance );
+                        } else {
+                          var vector = Direction.normalizeSquare( vx, vy );
+                          this.moveVector( vector.x * this.stepDistance, vector.y * this.stepDistance );
+                        }
                         didMove = true;
                       }
                     } else {
@@ -1427,7 +1442,12 @@
             } else {
               dx /= length;
               dy /= length;
-              this.moveVector( dx * this.stepDistance, dy * this.stepDistance );
+              if ( this._circularMovement ) {
+                this.moveVector( dx * this.stepDistance, dy * this.stepDistance );
+              } else {
+                var vector = Direction.normalizeSquare( dx, dy );
+                this.moveVector( vector.x * this.stepDistance, vector.y * this.stepDistance );
+              }
               if ( Math.abs( dx ) > Math.abs( dy ) ) {
                 this.setDirectionVector( dx, 0 );
               } else {
@@ -1849,15 +1869,15 @@
           }
         } else if ( distance > ( myRadius + characterRadius ) * $gameSystem._followerDistance ) {
           this.setMoveSpeed( character.realMoveSpeed() );
+          this.setThrough( $gamePlayer.isThrough() || $gamePlayer.isDebugThrough() );
 
-          // Prevent snapping through thin walls
-          if ( distance - ( myRadius + characterRadius ) > 1 ) {
-            dx /= distance;
-            dy /= distance;
+          if ( this._circularMovement ) {
+            this.moveVector( dx * this.stepDistance, dy * this.stepDistance );
+          } else {
+            var vector = Direction.normalizeSquare( dx, dy );
+            this.moveVector( vector.x * this.stepDistance, vector.y * this.stepDistance );
           }
 
-          this.setThrough( $gamePlayer.isThrough() || $gamePlayer.isDebugThrough() );
-          this.moveVector( dx * this.stepDistance, dy * this.stepDistance );
           this.setThrough( true );
         }
 
@@ -2551,7 +2571,7 @@
       var Sprite_Character_setCharacter = Sprite_Character.prototype.setCharacter;
       Sprite_Character.prototype.setCharacter = function( character ) {
         Sprite_Character_setCharacter.call( this, character );
-        this._extensionName = character._characterExtensions.name;
+        this._extensionName = character._characterExtensions ? character._characterExtensions.name : undefined;
       };
 
       var Sprite_Character_updateBitmap = Sprite_Character.prototype.updateBitmap;
@@ -2574,7 +2594,7 @@
     ( function() {
 
       Sprite_Character.prototype.isExtensionChanged = function() {
-        return this._extensionName != this._character._characterExtensions.name;
+        return this._extensionName != this._character._characterExtensions ? this._character._characterExtensions.name : undefined;
       };
 
     } )();
@@ -4218,6 +4238,27 @@
         return Direction.UP;
       }
       return Direction.DOWN;
+    };
+
+    Direction.normalize = function( vx, vy, length ) {
+      length = length || Math.sqrt( vx * vx + vy * vy );
+      return { x: vx / length, y: vy / length, l: length };
+    };
+
+    Direction.normalizeSquare = function( vx, vy, length ) {
+      var angle = Math.atan2( vy, vx );
+      var cos = Math.cos( angle );
+      var sin = Math.sin( angle );
+      if ( !length ) {
+        var absCos = Math.abs( cos );
+        var absSin = Math.abs( sin );
+        if ( absSin <= absCos ) {
+          length = 1 / absCos;
+        } else {
+          length = 1 / absSin;
+        }
+      }
+      return { x: vx * length, y: vy * length, l: length };
     };
 
   } )();
