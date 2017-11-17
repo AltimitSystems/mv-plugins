@@ -1894,6 +1894,11 @@
           this.setMoveSpeed( character.realMoveSpeed() );
           this.setThrough( $gamePlayer.isThrough() || $gamePlayer.isDebugThrough() );
 
+          if ( distance > myRadius * 2 ) {
+            dx /= distance;
+            dy /= distance;
+          }
+          
           if ( this._circularMovement ) {
             this.moveVector( dx * this.stepDistance, dy * this.stepDistance );
           } else {
