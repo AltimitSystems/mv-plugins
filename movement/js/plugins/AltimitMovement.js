@@ -2638,37 +2638,27 @@
           }
         }
 
-        // var currentState = this._character.extraState();
-        // var currentDirection = this._character._direction8;
-        // console.log( currentDirection );
-        // if ( this._character._characterExtensions.sets.length > 0 ) {
-        //   // Find our current state's sheet
-        // }
-        Sprite_Character_updateBitmap.call( this );
+        this._extraFrames = false;
+        var currentState = this._character.isMoving() ? ( this._character.realMoveSpeed() > 4 ? 'dashing' : 'moving' ) : 'standing';
+        var currentDirection = this._character._direction8;
+        if ( currentState != this._extraState || currentDirection != this._extraDirection ) {
+          // TODO : State/Direction changed; find new sprite sheet
+          this._extraState = currentState;
+          this._extraDirection = currentDirection;
+        }
 
+        if ( !this._extraFrames ) {
+          Sprite_Character_updateBitmap.call( this );
+        }
+      };
 
-        // if ( this.extraStateChanged() ) {
-        //   this._tilesetId = $gameMap.tilesetId();
-        //   this._tileId = this._character.tileId();
-        //   this._characterName = this._character.characterName();
-        //   this._characterIndex = this._character.characterIndex();
-        //   if ( this._tileId > 0 ) {
-        //     this.setTileBitmap();
-        //   } else {
-        //     this.setCharacterBitmap();
-        //   }
-        // }
-        //
-        // if ( !this._character.isMoving() ) {
-        //   this._extraState = 'standing';
-        // } else {
-        //   if ( this._character.realMoveSpeed() > 4 ) {
-        //     this._extraState = 'dashing';
-        //     console.log( this._extraState );
-        //   } else {
-        //     this._extraState = 'moving';
-        //   }
-        // }
+      var Sprite_Character_updateFrame = Sprite_Character.prototype.updateFrame;
+      Sprite_Character.prototype.updateFrame = function() {
+        if ( this._extraFrames ) {
+          // TODO : Select correct frame from sheet (this._extraDirection)
+        } else {
+          Sprite_Character_updateFrame.call( this );
+        }
       };
 
     } )();
