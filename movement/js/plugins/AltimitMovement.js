@@ -2859,19 +2859,19 @@
       };
 
       Definition.prototype._decodeDefText = function() {
+        this.sets = [];
+        
         var xmlDoc = DOM_PARSER.parseFromString( '<doc>' + this._def.responseText + '</doc>', 'text/xml' ).childNodes[0];
         for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
           switch ( xmlDoc.childNodes[ii].nodeName ) {
           case 'collider':
             this.collider = Collider.createFromXML( xmlDoc.childNodes[ii] );
             break;
-          // case 'set':
-          //   outObject.sets.push( DefinitionManager.loadSet( xmlDoc.childNodes[ii] ) );
-          //   break;
+          case 'set':
+            this.sets.push( DefinitionManager.loadSet( xmlDoc.childNodes[ii] ) );
+            break;
           }
         }
-
-        // console.log( xmlDoc );
       };
 
       Definition.prototype._requestDef = function( url ) {
@@ -2985,133 +2985,96 @@
       return this._cache.isReady();
     };
 
-  } )();
+    DefinitionManager.loadSet = function( xmlDoc ) {
+      var tag = xmlDoc.getAttribute( 'tag' );
+      var sheet = xmlDoc.getAttribute( 'sheet' );
+      var animations = [];
+      for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
+        switch ( xmlDoc.childNodes[ii].nodeName ) {
+        case 'animation':
+          animations.push( DefinitionManager.loadAnimation( xmlDoc.childNodes[ii] ) );
+          break;
+        }
+      }
+      return {
+        tag: tag,
+        sheet: sheet,
+        animations: animations
+      };
+    };
 
-  /**
-   * DefinitionManager
-   */
-  // function DefinitionManager() {
-  //   throw new Error( 'This is a static class' );
-  // }
-  // ( function() {
-  //
-  //   DefinitionManager.loadDefinition = function( fileName, outObject ) {
-  //     // TODO : Cache these
-  //     var xhr = new XMLHttpRequest();
-  //     var url = 'img/characters/' + fileName + '.xml';
-  //     xhr.open( 'GET', url );
-  //     xhr.overrideMimeType( 'text/xml' );
-  //     xhr.onload = function() {
-  //       if ( xhr.status < 400 ) {
-  //         var xmlDoc = DOM_PARSER.parseFromString( '<doc>' + xhr.responseText + '</doc>', 'text/xml' ).childNodes[0];
-  //         outObject.sets = [];
-  //         outObject.name = fileName;
-  //
-  //         for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
-  //           switch ( xmlDoc.childNodes[ii].nodeName ) {
-  //           case 'collider':
-  //             outObject.collider = Collider.createFromXML( xmlDoc.childNodes[ii] );
-  //             break;
-  //           case 'set':
-  //             outObject.sets.push( DefinitionManager.loadSet( xmlDoc.childNodes[ii] ) );
-  //             break;
-  //           }
-  //         }
-  //       }
-  //     };
-  //     xhr.send();
-  //   };
-  //
-  //   DefinitionManager.loadSet = function( xmlDoc ) {
-  //     var tag = xmlDoc.getAttribute( 'tag' );
-  //     var sheet = xmlDoc.getAttribute( 'sheet' );
-  //     var animations = [];
-  //     for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
-  //       switch ( xmlDoc.childNodes[ii].nodeName ) {
-  //       case 'animation':
-  //         animations.push( DefinitionManager.loadAnimation( xmlDoc.childNodes[ii] ) );
-  //         break;
-  //       }
-  //     }
-  //     return {
-  //       tag: tag,
-  //       sheet: sheet,
-  //       animations: animations
-  //     };
-  //   };
-  //
-  //   DefinitionManager.loadAnimation = function( xmlDoc ) {
-  //     var rate = parseInt( xmlDoc.getAttribute( 'rate' ) );
-  //
-  //     var direction = xmlDoc.getAttribute( 'direction' );
-  //     switch ( direction ) {
-  //     case 'down_left': case 'bottom_left': case 'lower_left': case 'lower_l':
-  //     case 'left_down': case 'left_bottom': case 'left_lower': case 'l_lower':
-  //     case 'south_west': case 'west_south': case '1':
-  //       direction = 1;
-  //       break;
-  //     case 'down': case 'bottom': case 'lower': case 'south': case '2':
-  //       direction = 2;
-  //       break;
-  //     case 'down_right': case 'bottom_right': case 'lower_right': case 'lower_r':
-  //     case 'right_down': case 'right_bottom': case 'right_lower': case 'r_lower':
-  //     case 'south_east': case 'east_south': case '3':
-  //       direction = 3;
-  //       break;
-  //     case 'left': case 'west': case '4':
-  //       direction = 4;
-  //       break;
-  //     case 'right': case 'east': case '6':
-  //       direction = 6;
-  //       break;
-  //     case 'up_left': case 'top_left': case 'upper_left': case 'upper_l':
-  //     case 'left_up': case 'left_top': case 'left_upper': case 'l_upper':
-  //     case 'north_west': case 'west_north': case '7':
-  //       direction = 7;
-  //       break;
-  //     case 'up': case 'top': case 'upper': case 'north': case '8':
-  //       direction = 8;
-  //       break;
-  //     case 'up_right': case 'top_right': case 'upper_right': case 'upper_r':
-  //     case 'right_up': case 'right_top': case 'right_upper': case 'r_upper':
-  //     case 'north_east': case 'east_north': case '9':
-  //       direction = 9;
-  //       break;
-  //     default:
-  //       direction = 5;
-  //       break;
-  //     }
-  //
-  //     var frames = [];
-  //     for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
-  //       switch ( xmlDoc.childNodes[ii].nodeName ) {
-  //       case 'frame':
-  //         frames.push( DefinitionManager.loadFrame( xmlDoc.childNodes[ii] ) );
-  //         break;
-  //       }
-  //     }
-  //
-  //     return {
-  //       rate: rate,
-  //       direction: direction,
-  //       frames: frames
-  //     };
-  //   };
-  //
-  //   DefinitionManager.loadFrame = function( xmlDoc ) {
-  //     var x = parseInt( xmlDoc.getAttribute( 'x' ) );
-  //     var y = parseInt( xmlDoc.getAttribute( 'y' ) );
-  //     var width = parseInt( xmlDoc.getAttribute( 'width' ) );
-  //     var height = parseInt( xmlDoc.getAttribute( 'height' ) );
-  //     return {
-  //       x: x,
-  //       y: y,
-  //       width: width,
-  //       height: height,
-  //     };
-  //   };
-  //
-  // } )();
+    DefinitionManager.loadAnimation = function( xmlDoc ) {
+      var rate = parseInt( xmlDoc.getAttribute( 'rate' ) );
+
+      var direction = xmlDoc.getAttribute( 'direction' );
+      switch ( direction ) {
+      case 'down_left': case 'bottom_left': case 'lower_left': case 'lower_l':
+      case 'left_down': case 'left_bottom': case 'left_lower': case 'l_lower':
+      case 'south_west': case 'west_south': case '1':
+        direction = 1;
+        break;
+      case 'down': case 'bottom': case 'lower': case 'south': case '2':
+        direction = 2;
+        break;
+      case 'down_right': case 'bottom_right': case 'lower_right': case 'lower_r':
+      case 'right_down': case 'right_bottom': case 'right_lower': case 'r_lower':
+      case 'south_east': case 'east_south': case '3':
+        direction = 3;
+        break;
+      case 'left': case 'west': case '4':
+        direction = 4;
+        break;
+      case 'right': case 'east': case '6':
+        direction = 6;
+        break;
+      case 'up_left': case 'top_left': case 'upper_left': case 'upper_l':
+      case 'left_up': case 'left_top': case 'left_upper': case 'l_upper':
+      case 'north_west': case 'west_north': case '7':
+        direction = 7;
+        break;
+      case 'up': case 'top': case 'upper': case 'north': case '8':
+        direction = 8;
+        break;
+      case 'up_right': case 'top_right': case 'upper_right': case 'upper_r':
+      case 'right_up': case 'right_top': case 'right_upper': case 'r_upper':
+      case 'north_east': case 'east_north': case '9':
+        direction = 9;
+        break;
+      default:
+        direction = 5;
+        break;
+      }
+
+      var frames = [];
+      for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
+        switch ( xmlDoc.childNodes[ii].nodeName ) {
+        case 'frame':
+          frames.push( DefinitionManager.loadFrame( xmlDoc.childNodes[ii] ) );
+          break;
+        }
+      }
+
+      return {
+        rate: rate,
+        direction: direction,
+        frames: frames
+      };
+    };
+
+    DefinitionManager.loadFrame = function( xmlDoc ) {
+      var x = parseInt( xmlDoc.getAttribute( 'x' ) );
+      var y = parseInt( xmlDoc.getAttribute( 'y' ) );
+      var width = parseInt( xmlDoc.getAttribute( 'width' ) );
+      var height = parseInt( xmlDoc.getAttribute( 'height' ) );
+      return {
+        x: x,
+        y: y,
+        width: width,
+        height: height,
+      };
+    };
+
+  } )();
 
   /**
    * CollisionMesh
