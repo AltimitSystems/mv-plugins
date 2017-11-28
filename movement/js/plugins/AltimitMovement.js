@@ -1103,7 +1103,39 @@
       };
 
       Game_CharacterBase.prototype.setDirectionVector = function( vx, vy ) {
+        if ( this.isDirectionFixed() ) {
+          return;
+        }
+
         var direction = Math.atan2( vy, vx ) / Math.PI;
+        var direction8 = Math.floor( ( direction + 1 ) * 4 ) % 8; // 8 directions
+        switch ( direction8 ) {
+        case 0:
+          this._direction8 = Direction.LEFT;
+          break;
+        case 1:
+          this._direction8 = Direction.UP_LEFT;
+          break;
+        case 2:
+          this._direction8 = Direction.UP;
+          break;
+        case 3:
+          this._direction8 = Direction.UP_RIGHT;
+          break;
+        case 4:
+          this._direction8 = Direction.RIGHT;
+          break;
+        case 5:
+          this._direction8 = Direction.DOWN_RIGHT;
+          break;
+        case 6:
+          this._direction8 = Direction.DOWN;
+          break;
+        case 7:
+          this._direction8 = Direction.DOWN_LEFT;
+          break;
+        }
+
         if ( direction >= -0.2 && direction < 0.2 ) {
           // East
           this.setDirection( Direction.RIGHT );
@@ -2606,9 +2638,37 @@
           }
         }
 
+        // var currentState = this._character.extraState();
+        // var currentDirection = this._character._direction8;
+        // console.log( currentDirection );
+        // if ( this._character._characterExtensions.sets.length > 0 ) {
+        //   // Find our current state's sheet
+        // }
         Sprite_Character_updateBitmap.call( this );
 
-        // TODO : Extra frames state checking
+
+        // if ( this.extraStateChanged() ) {
+        //   this._tilesetId = $gameMap.tilesetId();
+        //   this._tileId = this._character.tileId();
+        //   this._characterName = this._character.characterName();
+        //   this._characterIndex = this._character.characterIndex();
+        //   if ( this._tileId > 0 ) {
+        //     this.setTileBitmap();
+        //   } else {
+        //     this.setCharacterBitmap();
+        //   }
+        // }
+        //
+        // if ( !this._character.isMoving() ) {
+        //   this._extraState = 'standing';
+        // } else {
+        //   if ( this._character.realMoveSpeed() > 4 ) {
+        //     this._extraState = 'dashing';
+        //     console.log( this._extraState );
+        //   } else {
+        //     this._extraState = 'moving';
+        //   }
+        // }
       };
 
     } )();
@@ -2860,7 +2920,7 @@
 
       Definition.prototype._decodeDefText = function() {
         this.sets = [];
-        
+
         var xmlDoc = DOM_PARSER.parseFromString( '<doc>' + this._def.responseText + '</doc>', 'text/xml' ).childNodes[0];
         for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
           switch ( xmlDoc.childNodes[ii].nodeName ) {
@@ -3066,11 +3126,21 @@
       var y = parseInt( xmlDoc.getAttribute( 'y' ) );
       var width = parseInt( xmlDoc.getAttribute( 'width' ) );
       var height = parseInt( xmlDoc.getAttribute( 'height' ) );
+      var flip = xmlDoc.getAttribute( 'flip' );
+      if ( flip ) {
+        switch ( flip.toLowerCase() ) {
+        case 'yes': case 'true': case 'on': case 'enable': case '1': flip = true; break;
+        default: flip = false; break;
+        }
+      } else {
+        flip = false;
+      }
       return {
         x: x,
         y: y,
         width: width,
         height: height,
+        flip: flip,
       };
     };
 
