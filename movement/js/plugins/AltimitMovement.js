@@ -1108,7 +1108,7 @@
         }
 
         var direction = Math.atan2( vy, vx ) / Math.PI;
-        var direction8 = Math.floor( ( direction + 1 ) * 4 ) % 8; // 8 directions
+        var direction8 = Math.round( ( direction + 1 ) * 4 ) % 8; // 8 directions
         switch ( direction8 ) {
         case 0:
           this._direction8 = Direction.LEFT;
@@ -2638,13 +2638,26 @@
           }
         }
 
-        this._extraFrames = false;
-        var currentState = this._character.isMoving() ? ( this._character.realMoveSpeed() > 4 ? 'dashing' : 'moving' ) : 'standing';
-        var currentDirection = this._character._direction8;
-        if ( currentState != this._extraState || currentDirection != this._extraDirection ) {
-          // TODO : State/Direction changed; find new sprite sheet
-          this._extraState = currentState;
-          this._extraDirection = currentDirection;
+        if ( this._character._characterExtensions.isReady() ) {
+          var currentState = this._character._wasMoving ? ( this._character.realMoveSpeed() > 4 ? 'dashing' : 'moving' ) : 'standing';
+          var currentDirection = this._character._direction8;
+          if ( currentState && currentDirection ) {
+            if ( currentState != this._extraState || currentDirection != this._extraDirection ) {
+              this._extraState = currentState;
+              this._extraDirection = currentDirection;
+              this._extraFrames = false;
+
+              var sets = this._character._characterExtensions.sets;
+              for ( var ii = 0; ii < sets.length; ii++ ) {
+                if ( sets[ii].tag === this._extraState ) {
+                  this.bitmap = ImageManager.loadCharacter( sets[ii].sheet );
+                  this._extraFrames = true;
+                  this._extraCurrentFrame = 0;
+                  break;
+                }
+              }
+            }
+          }
         }
 
         if ( !this._extraFrames ) {
@@ -2656,6 +2669,31 @@
       Sprite_Character.prototype.updateFrame = function() {
         if ( this._extraFrames ) {
           // TODO : Select correct frame from sheet (this._extraDirection)
+          var sets = this._character._characterExtensions.sets;
+          for ( var ii = 0; ii < sets.length; ii++ ) {
+            if ( sets[ii].tag === this._extraState ) {
+              for ( var jj = 0; jj < sets[ii].animations.length; jj++ ) {
+                var animation = sets[ii].animations[jj];
+                if ( animation.direction === this._extraDirection ) {
+                  // Get animation frame
+                  this.updateHalfBodySprites();
+                  if ( this._bushDepth > 0 ) {
+                    // TODO : Bush stuff
+                    // var d = this._bushDepth;
+                    // this._upperBody.setFrame( sx, sy, pw, ph - d );
+                    // this._lowerBody.setFrame( sx, sy + ph - d, pw, d );
+                    // this.setFrame( sx, sy, 0, ph );
+                  } else {
+                    var frame = animation.frames[this._extraCurrentFrame | 0];
+                    this._extraCurrentFrame = ( this._extraCurrentFrame + ( animation.rate / 60 ) ) % animation.frames.length;
+                    this.setFrame( frame.x, frame.y, frame.width, frame.height );
+                    this.scale.x = animation.scaleX;
+                    this.scale.y = animation.scaleY;
+                  }
+                }
+              }
+            }
+          }
         } else {
           Sprite_Character_updateFrame.call( this );
         }
@@ -3104,10 +3142,25 @@
         }
       }
 
+      var scaleX = xmlDoc.getAttribute( 'sx' );
+      if ( scaleX ) {
+        scaleX = parseInt( scaleX );
+      } else {
+        scaleX = 1;
+      }
+      var scaleY = xmlDoc.getAttribute( 'sy' );
+      if ( scaleY ) {
+        scaleY = parseInt( scaleY );
+      } else {
+        scaleY = 1;
+      }
+
       return {
         rate: rate,
         direction: direction,
-        frames: frames
+        frames: frames,
+        scaleX: scaleX,
+        scaleY: scaleY,
       };
     };
 
@@ -3116,21 +3169,11 @@
       var y = parseInt( xmlDoc.getAttribute( 'y' ) );
       var width = parseInt( xmlDoc.getAttribute( 'width' ) );
       var height = parseInt( xmlDoc.getAttribute( 'height' ) );
-      var flip = xmlDoc.getAttribute( 'flip' );
-      if ( flip ) {
-        switch ( flip.toLowerCase() ) {
-        case 'yes': case 'true': case 'on': case 'enable': case '1': flip = true; break;
-        default: flip = false; break;
-        }
-      } else {
-        flip = false;
-      }
       return {
         x: x,
         y: y,
         width: width,
         height: height,
-        flip: flip,
       };
     };
 
