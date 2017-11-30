@@ -2707,7 +2707,7 @@
     ( function() {
 
       Sprite_Character.prototype.isExtensionChanged = function() {
-        if ( this._character._characterExtensions.isReady() ) {
+        if ( this._character._characterExtensions && this._character._characterExtensions.isReady() ) {
           return this._extensionUrl != this._character._characterExtensions._url;
         }
         return false;
