@@ -926,6 +926,12 @@
         this._characterExtensions = DefinitionManager.loadDefinition( 'img/characters/', characterName );
       };
 
+      var Game_CharacterBase_setDirection = Game_CharacterBase.prototype.setDirection;
+      Game_CharacterBase.prototype.setDirection = function( d ) {
+        Game_CharacterBase_setDirection.call( this, d );
+        this._direction8 = this._direction;
+      };
+
     } )();
 
     /**
@@ -1106,8 +1112,47 @@
         if ( this.isDirectionFixed() ) {
           return;
         }
-
         var direction = Math.atan2( vy, vx ) / Math.PI;
+
+        var direct = false;
+        if ( direction >= -0.2 && direction < 0.2 ) {
+          // East
+          this.setDirection( Direction.RIGHT );
+          direct = true;
+        } else if ( direction >= 0.3 && direction < 0.7 ) {
+          // South
+          this.setDirection( Direction.DOWN );
+          direct = true;
+        } else if ( direction >= -0.7 && direction < -0.3 ) {
+          // North
+          this.setDirection( Direction.UP );
+          direct = true;
+        } else if ( direction >= -1.2 && direction < -0.8 ) {
+          // West
+          this.setDirection( Direction.LEFT );
+          direct = true;
+        } else if ( direction >= 0.8 && direction < 1.2 ) {
+          // West
+          this.setDirection( Direction.LEFT );
+          direct = true;
+        }
+
+        if ( !direct ) {
+          var dx = vx > 0 ? Direction.RIGHT : ( vx ? Direction.LEFT : 0 );
+          var dy = vy > 0 ? Direction.DOWN : ( vy ? Direction.UP : 0 );
+          if ( dx && dy ) {
+            if ( this._direction === this.reverseDir( dx ) ) {
+              this.setDirection( dx );
+            } else if ( this._direction === this.reverseDir( dy ) ) {
+              this.setDirection( dy );
+            } else {
+              this.resetStopCount();
+            }
+          } else {
+            this.setDirection( dx || dy );
+          }
+        }
+
         var direction8 = Math.round( ( direction + 1 ) * 4 ) % 8; // 8 directions
         switch ( direction8 ) {
         case 0:
@@ -1136,41 +1181,6 @@
           break;
         }
 
-        if ( direction >= -0.2 && direction < 0.2 ) {
-          // East
-          this.setDirection( Direction.RIGHT );
-          return;
-        } else if ( direction >= 0.3 && direction < 0.7 ) {
-          // South
-          this.setDirection( Direction.DOWN );
-          return;
-        } else if ( direction >= -0.7 && direction < -0.3 ) {
-          // North
-          this.setDirection( Direction.UP );
-          return;
-        } else if ( direction >= -1.2 && direction < -0.8 ) {
-          // West
-          this.setDirection( Direction.LEFT );
-          return;
-        } else if ( direction >= 0.8 && direction < 1.2 ) {
-          // West
-          this.setDirection( Direction.LEFT );
-          return;
-        }
-
-        var dx = vx > 0 ? Direction.RIGHT : ( vx ? Direction.LEFT : 0 );
-        var dy = vy > 0 ? Direction.DOWN : ( vy ? Direction.UP : 0 );
-        if ( dx && dy ) {
-          if ( this._direction === this.reverseDir( dx ) ) {
-            this.setDirection( dx );
-          } else if ( this._direction === this.reverseDir( dy ) ) {
-            this.setDirection( dy );
-          } else {
-            this.resetStopCount();
-          }
-        } else {
-          this.setDirection( dx || dy );
-        }
       };
 
       Game_CharacterBase.prototype.checkEventTriggerTouchFrontVector = function( vx, vy ) {
@@ -2627,6 +2637,15 @@
      */
     ( function() {
 
+      var arrayContainsAny = function( a, b ) {
+        var result = a.filter( function( item ) { return b.indexOf( item ) > -1 } );
+        return result.length > 0;
+      };
+
+      var arrayContains = function( a, item ) {
+        return a.indexOf( item ) > -1;
+      };
+
       var Sprite_Character_updateBitmap = Sprite_Character.prototype.updateBitmap;
       Sprite_Character.prototype.updateBitmap = function() {
         if ( this.isExtensionChanged() ) {
@@ -2639,22 +2658,22 @@
         }
 
         if ( this._character._characterExtensions.isReady() ) {
-          var currentState = this._character._wasMoving ? ( this._character.realMoveSpeed() > 4 ? 'dashing' : 'moving' ) : 'standing';
-          var currentDirection = this._character._direction8;
-          if ( currentState && currentDirection ) {
-            if ( currentState != this._extraState || currentDirection != this._extraDirection ) {
-              this._extraState = currentState;
-              this._extraDirection = currentDirection;
-              this._extraFrames = false;
+          var currentState = ( this._character._wasMoving ? ( this._character.realMoveSpeed() > 4 ? 'dashing' : 'moving' ) : 'standing' );
+          var currentDirection = this._character._direction8 || 2;
 
-              var sets = this._character._characterExtensions.sets;
-              for ( var ii = 0; ii < sets.length; ii++ ) {
-                if ( sets[ii].tag === this._extraState ) {
-                  this.bitmap = ImageManager.loadCharacter( sets[ii].sheet );
-                  this._extraFrames = true;
-                  this._extraCurrentFrame = 0;
-                  break;
-                }
+          if ( currentState !== this._extraState || currentDirection !== this._extraDirection ) {
+            this._extraState = currentState;
+            this._extraDirection = currentDirection;
+            this._extraFrames = false;
+
+            var sets = this._character._characterExtensions.sets;
+            for ( var ii = 0; ii < sets.length; ii++ ) {
+              if ( arrayContains( sets[ii].tags, currentState ) ) {
+                // Set match
+                this.bitmap = ImageManager.loadCharacter( sets[ii].sheet );
+                this._extraFrames = true;
+                this._extraCurrentFrame = 0;
+                break;
               }
             }
           }
@@ -2668,28 +2687,33 @@
       var Sprite_Character_updateFrame = Sprite_Character.prototype.updateFrame;
       Sprite_Character.prototype.updateFrame = function() {
         if ( this._extraFrames ) {
-          // TODO : Select correct frame from sheet (this._extraDirection)
+          var found = false;
           var sets = this._character._characterExtensions.sets;
           for ( var ii = 0; ii < sets.length; ii++ ) {
-            if ( sets[ii].tag === this._extraState ) {
+            if ( found ) {
+              break;
+            }
+            if ( arrayContains( sets[ii].tags, this._extraState ) ) {
               for ( var jj = 0; jj < sets[ii].animations.length; jj++ ) {
                 var animation = sets[ii].animations[jj];
                 if ( animation.direction === this._extraDirection ) {
                   // Get animation frame
+                  var frame = animation.frames[this._extraCurrentFrame | 0];
+                  this._extraCurrentFrame = ( this._extraCurrentFrame + ( animation.rate / 60 ) ) % animation.frames.length;
                   this.updateHalfBodySprites();
                   if ( this._bushDepth > 0 ) {
                     // TODO : Bush stuff
-                    // var d = this._bushDepth;
-                    // this._upperBody.setFrame( sx, sy, pw, ph - d );
-                    // this._lowerBody.setFrame( sx, sy + ph - d, pw, d );
-                    // this.setFrame( sx, sy, 0, ph );
+                    var d = this._bushDepth;
+                    this._upperBody.setFrame( frame.x, frame.y, frame.width, frame.height - d );
+                    this._lowerBody.setFrame( frame.x, frame.y + frame.height - d, frame.width, d );
+                    this.setFrame( 0, 0, 0, 0 );
                   } else {
-                    var frame = animation.frames[this._extraCurrentFrame | 0];
-                    this._extraCurrentFrame = ( this._extraCurrentFrame + ( animation.rate / 60 ) ) % animation.frames.length;
                     this.setFrame( frame.x, frame.y, frame.width, frame.height );
-                    this.scale.x = animation.scaleX;
-                    this.scale.y = animation.scaleY;
                   }
+                  this.scale.x = animation.scaleX;
+                  this.scale.y = animation.scaleY;
+                  found = true;
+                  break;
                 }
               }
             }
@@ -3085,7 +3109,7 @@
         }
       }
       return {
-        tag: tag,
+        tags: tag.split( '|' ),
         sheet: sheet,
         animations: animations
       };
