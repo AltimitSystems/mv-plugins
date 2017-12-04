@@ -3130,7 +3130,12 @@
     };
 
     DefinitionManager.loadAnimation = function( xmlDoc ) {
-      var rate = parseInt( xmlDoc.getAttribute( 'rate' ) );
+      var rate = xmlDoc.getAttribute( 'rate' );
+      if ( rate ) {
+        rate = parseInt( rate );
+      } else {
+        rate = 0;
+      }
 
       var direction = xmlDoc.getAttribute( 'direction' );
       switch ( direction ) {
