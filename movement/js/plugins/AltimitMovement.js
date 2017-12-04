@@ -2666,20 +2666,36 @@
             this._extraDirection = currentDirection;
             this._extraFrames = false;
 
+            var found = false;
             var sets = this._character._characterExtensions.sets;
             for ( var ii = 0; ii < sets.length; ii++ ) {
+              if ( found ) {
+                break;
+              }
               if ( arrayContains( sets[ii].tags, currentState ) ) {
                 // Set match
-                this.bitmap = ImageManager.loadCharacter( sets[ii].sheet );
-                this._extraFrames = true;
-                this._extraCurrentFrame = 0;
-                break;
+                for ( var jj = 0; jj < sets[ii].animations.length; jj++ ) {
+                  var animation = sets[ii].animations[jj];
+                  if ( animation.direction === currentDirection ) {
+                    this.bitmap = ImageManager.loadCharacter( sets[ii].sheet );
+                    this._extraFrames = true;
+                    this._extraCurrentFrame = 0;
+                    this.scale.x = animation.scaleX;
+                    this.scale.y = animation.scaleY;
+                    this._characterName = '';
+                    this._characterIndex = -1;
+                    found = true;
+                    break;
+                  }
+                }
               }
             }
           }
         }
 
         if ( !this._extraFrames ) {
+          this.scale.x = 1;
+          this.scale.y = 1;
           Sprite_Character_updateBitmap.call( this );
         }
       };
@@ -2710,8 +2726,6 @@
                   } else {
                     this.setFrame( frame.x, frame.y, frame.width, frame.height );
                   }
-                  this.scale.x = animation.scaleX;
-                  this.scale.y = animation.scaleY;
                   found = true;
                   break;
                 }
