@@ -2657,7 +2657,7 @@
           }
         }
 
-        if ( this._character._characterExtensions.isReady() ) {
+        if ( this._character._characterExtensions && this._character._characterExtensions.isReady() ) {
           var currentState = ( this._character._wasMoving ? ( this._character.realMoveSpeed() > 4 ? 'dashing' : 'moving' ) : 'standing' );
           var currentDirection = this._character._direction8 || 2;
 
