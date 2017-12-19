@@ -920,12 +920,6 @@
         return true;
       };
 
-      var Game_CharacterBase_setImage = Game_CharacterBase.prototype.setImage;
-      Game_CharacterBase.prototype.setImage = function( characterName, characterIndex ) {
-        Game_CharacterBase_setImage.call( this, characterName, characterIndex );
-        this._characterExtensions = DefinitionManager.loadDefinition( 'img/characters/', characterName );
-      };
-
       var Game_CharacterBase_setDirection = Game_CharacterBase.prototype.setDirection;
       Game_CharacterBase.prototype.setDirection = function( d ) {
         Game_CharacterBase_setDirection.call( this, d );
@@ -2646,18 +2640,24 @@
         return a.indexOf( item ) > -1;
       };
 
+      var Sprite_Character_setCharacterBitmap = Sprite_Character.prototype.setCharacterBitmap;
+      Sprite_Character.prototype.setCharacterBitmap = function() {
+        this._characterExtensions = DefinitionManager.loadDefinition( 'img/characters/', this._character._characterName );
+        Sprite_Character_setCharacterBitmap.call( this );
+      };
+
       var Sprite_Character_updateBitmap = Sprite_Character.prototype.updateBitmap;
       Sprite_Character.prototype.updateBitmap = function() {
         if ( this.isExtensionChanged() ) {
-          this._extensionUrl = this._character._characterExtensions._url;
+          this._extensionUrl = this._characterExtensions._url;
 
           if ( !this._character._hasCustomCollider ) {
             // Set extension file collider
-            this._character.setCollider( this._character._characterExtensions.collider );
+            this._character.setCollider( this._characterExtensions.collider );
           }
         }
 
-        if ( this._character._characterExtensions && this._character._characterExtensions.isReady() ) {
+        if ( this._characterExtensions && this._characterExtensions.isReady() ) {
           var currentState = ( this._character._wasMoving ? ( this._character.realMoveSpeed() > 4 ? 'dashing' : 'moving' ) : 'standing' );
           var currentDirection = this._character._direction8 || 2;
 
@@ -2667,7 +2667,7 @@
             this._extraFrames = false;
 
             var found = false;
-            var sets = this._character._characterExtensions.sets;
+            var sets = this._characterExtensions.sets;
             for ( var ii = 0; ii < sets.length; ii++ ) {
               if ( found ) {
                 break;
@@ -2704,7 +2704,7 @@
       Sprite_Character.prototype.updateFrame = function() {
         if ( this._extraFrames ) {
           var found = false;
-          var sets = this._character._characterExtensions.sets;
+          var sets = this._characterExtensions.sets;
           for ( var ii = 0; ii < sets.length; ii++ ) {
             if ( found ) {
               break;
@@ -2745,8 +2745,8 @@
     ( function() {
 
       Sprite_Character.prototype.isExtensionChanged = function() {
-        if ( this._character._characterExtensions && this._character._characterExtensions.isReady() ) {
-          return this._extensionUrl != this._character._characterExtensions._url;
+        if ( this._characterExtensions && this._characterExtensions.isReady() ) {
+          return this._extensionUrl != this._characterExtensions._url;
         }
         return false;
       };
