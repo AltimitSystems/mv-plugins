@@ -2651,7 +2651,7 @@
         if ( this.isExtensionChanged() ) {
           this._extensionUrl = this._characterExtensions._url;
 
-          if ( !this._character._hasCustomCollider ) {
+          if ( !this._character._hasCustomCollider && this._characterExtensions.collider ) {
             // Set extension file collider
             this._character.setCollider( this._characterExtensions.collider );
           }
