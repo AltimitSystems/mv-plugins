@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2017 Altimit Community Contributors
+ * Copyright (c) 2017-2018 Altimit Community Contributors
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -232,7 +232,7 @@
  *  Plugin will automatically apply when ON.
  *
  * About:
- *  Version 0.40 Beta
+ *  Version 0.41 Beta
  *  Website https://github.com/AltimitSystems/mv-plugins/tree/master/movement
  */
 ( function() {
@@ -1431,11 +1431,12 @@
         }
 
         if ( this._moveTarget ) {
-          this._touchTarget = false;
+          this._touchTarget = null;
         }
 
         if ( !this.isMoving() && this.canMove() ) {
           if ( navigator.getGamepads ) {
+            // Gamepad movement
             var gamepads = navigator.getGamepads();
             var didMove = false;
             var didTurn = false;
@@ -1478,42 +1479,71 @@
               }
             }
             if ( didMove ) {
-              this._touchTarget = false;
+              this._touchTarget = null;
               return;
             }
           }
 
           var direction = this.getInputDirection();
           if ( direction > 0 ) {
+            // Regular movement
             this.executeMove( direction );
-            this._touchTarget = false;
+            this._touchTarget = null;
           } else if ( $gameSystem._enableTouchMouse && $gameTemp.isDestinationValid() ) {
-            var aabbox = this.collider().aabbox;
-
+            // Touch movement
+            var characterTarget = null;
+            var touchedCharacters = $gameMap.getCharactersUnderPoint( $gameTemp.destinationX(), $gameTemp.destinationY() ).filter( function( character ) {
+              // Filter out events that player cannot reach
+              return !( character._eventId && !character.isNormalPriority() );
+            } );
             if ( this.isInVehicle() ) {
-              // Check if we clicked on our vehicle character
-              var vehicle = $gamePlayer.vehicle();
-              if ( $gameTemp.destinationX() >= vehicle._x + aabbox.left && $gameTemp.destinationX() <= vehicle._x + aabbox.right ) {
-                if ( $gameTemp.destinationY() >= vehicle._y + aabbox.top && $gameTemp.destinationY() <= vehicle._y + aabbox.bottom ) {
-                  this.getOffVehicle();
-                  this._touchTarget = false;
-                  return;
+              // In vehicle
+              if ( touchedCharacters.contains( $gamePlayer.vehicle() ) ) {
+                // Get off vehicle
+                this.getOffVehicle();
+              }
+            } else {
+              // Check if we're touching an interactable
+              if ( touchedCharacters.contains( $gameMap.airship() ) ) {
+                characterTarget = $gameMap.airship();
+              } else if ( touchedCharacters.contains( $gameMap.ship() ) ) {
+                characterTarget = $gameMap.ship();
+              } else if ( touchedCharacters.contains( $gameMap.boat() ) ) {
+                characterTarget = $gameMap.boat();
+              } else if ( touchedCharacters.length === 1 && touchedCharacters[0] === $gamePlayer ) {
+                // Only touched player, action time
+                if ( !this.getOnVehicle() ) {
+                  this.checkEventTriggerHere( [0] );
+                }
+                characterTarget = $gamePlayer;
+              } else if ( this.canStartLocalEvents() ) {
+                // Only care about events now
+                touchedCharacters = touchedCharacters.filter( function( character ) {
+                  return !!character._eventId && character._trigger === 0;
+                } );
+
+                if ( touchedCharacters.length ) {
+                  // Move toward character
+                  characterTarget = touchedCharacters[0];
                 }
               }
             }
 
-            this._touchTargetX = $gameTemp.destinationX() - ( aabbox.left + aabbox.right ) / 2;
-            this._touchTargetY = $gameTemp.destinationY() - ( aabbox.top + aabbox.bottom ) / 2
-            this._touchTarget = true;
+            // Move toward destination
+            if ( !characterTarget ) {
+              this._touchTarget = new Point( $gameTemp.destinationX() - 0.5, $gameTemp.destinationY() - 0.5 );
+            } else {
+              this._touchTarget = characterTarget;
+            }
             $gameTemp.clearDestination();
           }
 
           if ( this._touchTarget ) {
-            var dx = $gameMap.directionX( this._x, this._touchTargetX );
-            var dy = $gameMap.directionY( this._y, this._touchTargetY );
+            var dx = $gameMap.directionX( this._x, this._touchTarget.x );
+            var dy = $gameMap.directionY( this._y, this._touchTarget.y );
             var length = Math.sqrt( dx * dx + dy * dy );
             if ( length <= this.stepDistance ) {
-              this._touchTarget = false;
+              this._touchTarget = null;
             } else {
               dx /= length;
               dy /= length;
@@ -1529,38 +1559,51 @@
                 this.setDirectionVector( 0, dy );
               }
               if ( this.isOnLadder() ) {
-                this.setDirection(8);
-              }
-              this._touchTarget = this.isMovementSucceeded();
-            }
-
-            if ( !this._touchTarget ) {
-              if ( !this.isInVehicle() && this.getOnVehicle() ) {
-                return;
+                this.setDirection( 8 );
               }
 
-              if ( this.canStartLocalEvents() ) {
-                var characters = $gameMap.getCharactersUnder( $gamePlayer, this._x, this._y ).filter( function( character ) {
-                  return character._trigger === 0;
-                } );
+              // Can't move any more, so stop walking
+              if ( !this.isMovementSucceeded() ) {
+                var collider = this._touchTarget.collider ? this._touchTarget.collider() : null;
+                if ( collider ) {
+                  // Touching a character, check if we've reached it
+                  var rx = dx * this.stepDistance;
+                  var ry = dy * this.stepDistance;
+                  if ( Collider.intersect( this._touchTarget.x, this._touchTarget.y, collider, this._x + rx, this._y + ry, this.collider() ) ) {
+                    var vehicle;
+                    if ( !!this._touchTarget._eventId ) {
+                      this._touchTarget.start();
+                    } else if ( this._touchTarget === $gameMap.airship() ) {
+                      vehicle = $gameMap.airship();
+                      this._vehicleType = 'airship';
+                      this._collisionType = CollisionMesh.AIRSHIP;
+                    } else if ( this._touchTarget === $gameMap.ship() ) {
+                      vehicle = $gameMap.ship();
+                      this._vehicleType = 'ship';
+                      this._collisionType = CollisionMesh.SHIP;
+                    } else if ( this._touchTarget === $gameMap.boat() ) {
+                      vehicle = $gameMap.boat();
+                      this._vehicleType = 'boat';
+                      this._collisionType = CollisionMesh.BOAT;
+                    }
 
-                if ( characters.length > 0 ) {
-                  var closest;
-                  var dist = Number.POSITIVE_INFINITY;
-                  for ( var ii = 0; ii < characters.length; ii++ ) {
-                    var entryX = characters[ii]._x;
-                    var entryY = characters[ii]._y;
+                    if ( vehicle ) {
+                      this._vehicleGettingOn = true;
+                      vehicle._passengerCollider = this.collider();
+                      this._collider = vehicle.collider();
 
-                    var dx = this._x - entryX;
-                    var dy = this._y - entryY;
-                    var td = ( dx * dx + dy * dy );
-                    if ( td < dist ) {
-                      dist = td;
-                      closest = characters[ii];
+                      var dx = $gameMap.directionX( this._x, vehicle._x );
+                      var dy = $gameMap.directionY( this._y, vehicle._y );
+
+                      var wasThrough = this.isThrough();
+                      this.setThrough( true );
+                      this.moveVector( dx, dy );
+                      this.setThrough( wasThrough );
+                      this.gatherFollowers();
                     }
                   }
-                  closest.start();
                 }
+                this._touchTarget = null;
               }
             }
           }
@@ -2329,7 +2372,7 @@
       var Game_Interpreter_command101 = Game_Interpreter.prototype.command101;
       Game_Interpreter.prototype.command101 = function() {
         Game_Interpreter_command101.call( this );
-        $gamePlayer._touchTarget = false;
+        $gamePlayer._touchTarget = null;
       };
 
     } )();
@@ -2412,6 +2455,25 @@
         return CollisionMesh.getMesh( this.mapId(), collisionType );
       }
 
+      Game_Map.prototype.getCharactersUnderPoint = function( x, y ) {
+        return this.characters().filter( function( entry ) {
+          if ( !entry ) {
+            return false;
+          }
+          var aabbox = entry.collider().aabbox;
+          if ( x < entry._x + aabbox.left ) {
+            return false;
+          } else if ( x > entry._x + aabbox.right ) {
+            return false;
+          } else if ( y < entry._y + aabbox.top ) {
+            return false;
+          } else if ( y > entry._y + aabbox.bottom ) {
+            return false;
+          }
+          return true;
+        } );
+      };
+
       Game_Map.prototype.getCharactersUnder = function( character, x, y ) {
         var vx = x - character.x;
         var vy = y - character.y;
@@ -2421,7 +2483,7 @@
 
         // Gather any solid characters within the movement bounding box
         var loopMap = {};
-        var characters = $gameMap.characters().filter( function( entry ) {
+        var characters = this.characters().filter( function( entry ) {
           if ( !entry ) {
             return false;
           }
@@ -2808,8 +2870,8 @@
       Sprite_Destination.prototype.updatePosition = function() {
         var tileWidth = $gameMap.tileWidth();
         var tileHeight = $gameMap.tileHeight();
-        var x = $gamePlayer._touchTargetX;
-        var y = $gamePlayer._touchTargetY;
+        var x = $gamePlayer._touchTarget.x;
+        var y = $gamePlayer._touchTarget.y;
         this.x = ( $gameMap.adjustX( x ) + 0.5 ) * tileWidth;
         this.y = ( $gameMap.adjustY( y ) + 0.5 ) * tileHeight;
       };
@@ -4406,7 +4468,7 @@
     };
 
     /**
-     * Do colliders A & B touch
+     * Does collider A encase B
      * @param  {Number}   ax X-position collider A
      * @param  {Number}   ay Y-position collider A
      * @param  {Collider} ac Collider A
