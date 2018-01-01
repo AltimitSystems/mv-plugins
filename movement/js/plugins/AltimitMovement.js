@@ -1601,6 +1601,10 @@
                       this.setThrough( wasThrough );
                       this.gatherFollowers();
                     }
+                  } else if ( !!this._touchTarget._eventId ) {
+                    // We definitely attempted to move to an event
+                    // It could be behind a counter so force an event check
+                    this.checkEventTriggerThere( [0] );
                   }
                 }
                 this._touchTarget = null;
