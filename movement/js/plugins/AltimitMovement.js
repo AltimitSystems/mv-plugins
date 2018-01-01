@@ -1504,11 +1504,11 @@
               }
             } else {
               // Check if we're touching an interactable
-              if ( touchedCharacters.contains( $gameMap.airship() ) ) {
+              if ( touchedCharacters.contains( $gameMap.airship() ) && $gameMap.airship()._mapId === $gameMap.mapId() ) {
                 characterTarget = $gameMap.airship();
-              } else if ( touchedCharacters.contains( $gameMap.ship() ) ) {
+              } else if ( touchedCharacters.contains( $gameMap.ship() ) && $gameMap.ship()._mapId === $gameMap.mapId() ) {
                 characterTarget = $gameMap.ship();
-              } else if ( touchedCharacters.contains( $gameMap.boat() ) ) {
+              } else if ( touchedCharacters.contains( $gameMap.boat() ) && $gameMap.boat()._mapId === $gameMap.mapId() ) {
                 characterTarget = $gameMap.boat();
               } else if ( touchedCharacters.length === 1 && touchedCharacters[0] === $gamePlayer ) {
                 // Only touched player, action time
