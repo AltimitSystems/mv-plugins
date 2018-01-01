@@ -926,6 +926,24 @@
         this._direction8 = this._direction;
       };
 
+      var Game_CharacterBase_screenX = Game_CharacterBase.prototype.screenX;
+      Game_CharacterBase.prototype.screenX = function() {
+        var round = Math.round;
+        Math.round = Math.floor;
+        var val = Game_CharacterBase_screenX.call( this );
+        Math.round = round;
+        return val;
+      };
+
+      var Game_CharacterBase_screenY = Game_CharacterBase.prototype.screenY;
+      Game_CharacterBase.prototype.screenY = function() {
+        var round = Math.round;
+        Math.round = Math.floor;
+        var val = Game_CharacterBase_screenY.call( this );
+        Math.round = round;
+        return val;
+      };
+
     } )();
 
     /**
