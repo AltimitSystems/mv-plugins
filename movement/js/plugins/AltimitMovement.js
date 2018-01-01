@@ -1944,57 +1944,68 @@
           return;
         }
 
-        var screenRadius = Math.sqrt( Graphics.width * Graphics.width + Graphics.height * Graphics.height ) / 2;
-        screenRadius /= Math.sqrt( $gameMap.tileWidth() * $gameMap.tileWidth() + $gameMap.tileHeight() * $gameMap.tileHeight() ) / 2;
+        var displayWidth = Graphics.width / $gameMap.tileWidth();
+        var displayHeight = Graphics.height / $gameMap.tileHeight();
 
-        var myBox = this.collider().aabbox;
+        var aabbox = this.collider().aabbox;
+        var width = aabbox.right - aabbox.left;
+        var height = aabbox.bottom - aabbox.top;
 
-        var myRadius;
-        if ( this.collider().type === Collider.CIRCLE ) {
-          myRadius = this.collider().radius;
-        } else {
-          var myWidth = myBox.right - myBox.left;
-          var myHeight = myBox.bottom - myBox.top;
-          myRadius = Math.sqrt( myWidth * myWidth + myHeight * myHeight ) / 2;
+        var ax = this._x + ( aabbox.left + aabbox.right ) / 2;
+        var ay = this._y + ( aabbox.top + aabbox.bottom ) / 2;
+
+        // Teleportation
+        var midX = $gameMap.canvasToMapX( Graphics.width / 2 );
+        var dmX = $gameMap.directionX( ax, midX );
+        if ( dmX > displayWidth + width ) {
+          // Off left edge
+          var tx = $gameMap.canvasToMapX( 0 ) - width;
+          if ( $gameMap.canWalk( this, tx, this._y ) ) {
+            this.setPosition( tx, this._y );
+          }
+        } else if ( dmX < -displayWidth - width ) {
+          // Off right edge
+          var tx = $gameMap.canvasToMapX( Graphics.width ) + width;
+          if ( $gameMap.canWalk( this, tx, this._y ) ) {
+            this.setPosition( tx, this._y );
+          }
+        }
+        var midY = $gameMap.canvasToMapY( Graphics.height / 2 );
+        var dmY = $gameMap.directionY( ay, midY );
+        if ( dmY > displayHeight + height ) {
+          // Off top edge
+          var ty = $gameMap.canvasToMapY( 0 ) - height;
+          if ( $gameMap.canWalk( this, this._x, ty ) ) {
+            this.setPosition( this._x, ty );
+          }
+        } else if ( dmY < -displayHeight - height ) {
+          // Off bottom edge
+          var ty = $gameMap.canvasToMapY( Graphics.height ) + height;
+          if ( $gameMap.canWalk( this, this._x, ty ) ) {
+            this.setPosition( this._x, ty );
+          }
         }
 
         var characterBox = character.collider().aabbox;
+        var cWidth = characterBox.right - characterBox.left;
+        var cHeight = characterBox.bottom - characterBox.top;
 
-        var characterRadius;
-        if ( character.collider().type === Collider.CIRCLE ) {
-          characterRadius = character.collider().radius;
-        } else {
-          var characterWidth = characterBox.right - characterBox.left;
-          var characterHeight = characterBox.bottom - characterBox.top;
-          characterRadius = Math.sqrt( characterWidth * characterWidth + characterHeight * characterHeight ) / 2;
-        }
+        var bx = character._x + ( characterBox.left + characterBox.right ) / 2;
+        var by = character._y + ( characterBox.top + characterBox.bottom ) / 2;
 
-        var myCenterX = this.x + ( myBox.left + myBox.right ) / 2;
-        var myCenterY = this.y + ( myBox.top + myBox.bottom ) / 2;
-
-        var characterCenterX = character.x + ( characterBox.left + characterBox.right ) / 2;
-        var characterCenterY = character.y + ( characterBox.top + characterBox.bottom ) / 2;
-
-        var dx = $gameMap.directionX( myCenterX, characterCenterX );
-        var dy = $gameMap.directionY( myCenterY, characterCenterY );
+        var dx = $gameMap.directionX( ax, bx );
+        var dy = $gameMap.directionY( ay, by );
 
         var distance = Math.sqrt( dx * dx + dy * dy );
-        if ( distance > screenRadius ) {
-          dx /= distance;
-          dy /= distance;
-          dx *= screenRadius;
-          dy *= screenRadius;
-          var tx = Math.floor( character.x - dx ) + 0.5;
-          var ty = Math.floor( character.y - dy ) + 0.5;
+        var radius = ( this.collider().type === Collider.CIRCLE ? this.collider().radius : ( width > height ? width : height ) / 2 );
+        var characterRadius = ( character.collider().type === Collider.CIRCLE ? character.collider().radius : ( cWidth > cHeight ? cWidth : cHeight ) / 2 );
 
-          if ( $gameMap.canWalk( this, tx, ty ) ) {
-            this.setPosition( tx, ty );
-          }
-        } else if ( distance > ( myRadius + characterRadius ) * $gameSystem._followerDistance ) {
+        if ( distance > ( radius + characterRadius ) * $gameSystem._followerDistance ) {
+          // Chase if far away
           this.setMoveSpeed( character.realMoveSpeed() );
           this.setThrough( $gamePlayer.isThrough() || $gamePlayer.isDebugThrough() );
 
-          if ( distance > myRadius * 2 ) {
+          if ( distance > 2 ) {
             dx /= distance;
             dy /= distance;
           }
@@ -2010,7 +2021,7 @@
         }
 
         if ( this.isOnLadder() ) {
-          this.setDirection(8);
+          this.setDirection( 8 );
         } else {
           var adx = Math.abs( dx );
           var ady = Math.abs( dy );
