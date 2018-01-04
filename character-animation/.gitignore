@@ -1,0 +1,17 @@
+### RPG Maker MV Project ###
+audio
+data
+fonts
+icon
+img
+js/*
+!js/plugins
+js/plugins/*
+movies
+save
+Game.rpgproject
+index.html
+QSpriteEditor-w64
+
+### AltimitMovement ###
+!js/plugins/AltimitCharacterAnimation.js
