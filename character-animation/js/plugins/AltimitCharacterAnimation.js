@@ -93,6 +93,173 @@
   } )();
 
   /**
+   * Game_Character
+   */
+  ( function() {
+
+    /**
+     * Overrides
+     */
+    ( function() {
+
+      var Game_Character_initMembers = Game_Character.prototype.initMembers;
+      Game_Character.prototype.initMembers = function() {
+        Game_Character_initMembers.call( this );
+        this._extraState = {
+          lastState: {},
+          state: {
+            bush: 0,
+            dashing: 0,
+            jumping: 0,
+            ladder: 0,
+            moving: 0,
+            idle: 0,
+          },
+          override: -1,
+          x: -1,
+          y: -1,
+        };
+      };
+
+    } )();
+
+    /**
+     * Extensions
+     */
+    ( function() {
+
+      Game_Character.prototype.extraStateHasMoved = function() {
+        if ( this.wasMoving ) {
+          return this.wasMoving();
+        }
+        return this._extraState.x !== this._realX || this._extraState.y !== this._realY;
+      };
+
+      Game_Character.prototype.extraStateGet = function() {
+        var names = [];
+        for ( var key in this._extraState.state ) {
+          if ( this._extraState.state.hasOwnProperty( key ) ) {
+            names.push( key );
+          }
+        }
+        return names;
+      };
+
+      Game_Character.prototype.extraStateSet = function( names ) {
+        if ( this._extraState.override > 0 ) {
+          this.extraStateReset();
+        }
+
+        this._extraState.lastState = this._extraState.state;
+        this._extraState.state = {};
+        for ( var ii = 0; ii < names.length; ii++ ) {
+          this._extraState.state[names[ii]] = 0;
+        }
+      };
+
+      Game_Character.prototype.extraStateReset = function() {
+        if ( this._extraState.override > 0 ) {
+          this._extraState.state = this._extraState.lastState;
+          this._extraState.lastState = {};
+          this._extraState.override = 0;
+        }
+        for ( var key in this._extraState.state ) {
+          if ( this._extraState.state.hasOwnProperty( key ) ) {
+            this._extraState.state[key] = 0;
+          }
+        }
+      };
+
+      Game_Character.prototype.extraStateUpdate = function() {
+        if ( this._extraState.override > 0 ) {
+          if ( this._extraState.override !== Number.POSITIVE_INFINITY ) {
+            this._extraState.override--;
+            for ( var key in this._extraState.state ) {
+              if ( this._extraState.state.hasOwnProperty( key ) ) {
+                this._extraState.state[key]++;
+              }
+            }
+            if ( this._extraState.override == 0 ) {
+              // Reset state override
+              this._extraState.state = this._extraState.lastState;
+              this._extraState.lastState = {};
+            }
+          }
+        } else {
+          // Update state
+          var idling = true;
+          if ( this.isOnBush() ) {
+            this._extraState.state.bush++;
+            idling = false;
+          } else {
+            this._extraState.state.bush = 0;
+          }
+          if ( this.isDashing() && this.extraStateHasMoved() ) {
+            this._extraState.state.dashing++;
+            idling = false;
+          } else {
+            this._extraState.state.dashing = 0;
+          }
+          if ( this.isJumping() ) {
+            this._extraState.state.jumping++;
+            idling = false;
+          } else {
+            this._extraState.state.jumping = 0;
+          }
+          if ( this.isOnLadder() ) {
+            this._extraState.state.ladder++;
+            idling = false;
+          } else {
+            this._extraState.state.ladder = 0;
+          }
+          if ( this.isMoving() || this.extraStateHasMoved() ) {
+            this._extraState.state.moving++;
+            idling = false;
+          } else {
+            this._extraState.state.moving = 0;
+          }
+          if ( idling ) {
+            this._extraState.state.idle++;
+          } else {
+            this._extraState.state.idle = 0;
+          }
+        }
+      };
+
+      Game_Character.prototype.extraStateParams = function() {
+        var dx = ( this._extraState.x - this._realX ) * $gameMap.tileWidth();
+        var dy = ( this._extraState.y - this._realY ) * $gameMap.tileHeight();
+        return {
+          direction: this.direction(),
+          direction4: this.direction(),
+          direction8: this.direction8 ? this.direction8() : this.direction(),
+
+          state: this._extraState.state,
+          lastState: this._extraState.lastState,
+          override: this._extraState.override > 0,
+
+          tilesetId: $gameMap.tilesetId(),
+          tileId: this.tileId(),
+          characterName: this.characterName(),
+          characterIndex: this.characterIndex(),
+
+          character: this,
+
+          isDebugThrough: this.isDebugThrough ? this.isDebugThrough() : false,
+          isDashButtonPressed: this.isDashButtonPressed ? this.isDashButtonPressed() : false,
+          isOnDamageFloor: this.isOnDamageFloor ? this.isOnDamageFloor() : false,
+          areFollowersGathering: this.areFollowersGathering ? this.areFollowersGathering() : false,
+          areFollowersGathered: this.areFollowersGathered ? this.areFollowersGathered() : false,
+
+          travelled: Math.sqrt( dx * dx + dy * dy ),
+        };
+      };
+
+    } )();
+
+  } )();
+
+  /**
    * Sprite_Character
    */
   ( function() {
@@ -110,6 +277,12 @@
         this._extraAnimation = null;
         this._extraBitmap = null;
         this._extraFrame = 0;
+        this._extraMeta = {
+          oneShot: false,
+          sx: 1,
+          sy: 1,
+          speed: 1,
+        };
       };
 
       var Sprite_Character_update = Sprite_Character.prototype.update;
@@ -123,8 +296,8 @@
         Sprite_Character_updateBitmap.call( this );
         if ( this._extraAnimation ) {
           this.bitmap = this._extraBitmap;
-          this.scale.x = this._definition.animations.sx * this._extraAnimation.sx;
-          this.scale.y = this._definition.animations.sy * this._extraAnimation.sy;
+          this.scale.x = this._definition.animations.sx * this._extraAnimation.sx * this._extraMeta.sx;
+          this.scale.y = this._definition.animations.sy * this._extraAnimation.sy * this._extraMeta.sy;
         }
       };
 
@@ -132,8 +305,16 @@
       Sprite_Character.prototype.updateFrame = function() {
         Sprite_Character_updateFrame.call( this );
         if ( this._extraAnimation ) {
-          this._extraFrame = this._extraFrame % this._extraAnimation.frames.length;
-          var frame = this._extraAnimation.frames[this._extraFrame++];
+          var frameRate = this._extraAnimation.rate * this._extraMeta.speed;
+          this._extraFrame = this._extraFrame + frameRate / 60;
+          if ( this._extraFrame >= this._extraAnimation.frames.length ) {
+            if ( this._extraMeta.oneShot ) {
+              this._extraFrame = this._extraAnimation.frames.length - 1;
+            } else {
+              this._extraFrame = this._extraFrame % this._extraAnimation.frames.length;
+            }
+          }
+          var frame = this._extraAnimation.frames[this._extraFrame | 0];
           this.setFrame( frame.x, frame.y, frame.width, frame.height );
         }
       };
@@ -163,19 +344,32 @@
             this._extraBitmap = ImageManager.loadCharacter( this._definition.animations.sheet );
           }
 
-          // TODO : Figure out state?
-          // TODO : Figure out how long we've been in state
+          if ( !this._character._hasCustomCollider && this._character.setCollider && this._definition.collider ) {
+            // Set extension file collider
+            this._character.setCollider( this._definition.collider );
+          }
 
-          var params = {
-            state: ( this._character.isMoving() || this._character._wasMoving ? 'moving' : 'default' ),
-            direction: this._character.direction(),
-            direction8: this._character.direction8 ? this._character.direction8() : this._character.direction(),
-          };
-          var result = this._definition.script( params );
-          if ( result ) {
-            this._extraAnimation = this._definition.animations.animations[result.animation];
-          } else {
-            this._extraAnimation = null;
+          this._character.extraStateUpdate();
+
+          var params = this._character.extraStateParams();
+          this._character._extraState.x = this._character._realX;
+          this._character._extraState.y = this._character._realY;
+
+          try {
+            var result = this._definition.script( params );
+            if ( result ) {
+              this._extraAnimation = this._definition.animations.animations[result.animation];
+              this._extraMeta = {
+                oneShot: !!result.oneShot,
+                sx: ( result.scaleX !== undefined ? result.scaleX : 1 ),
+                sy: ( result.scaleY !== undefined ? result.scaleY : 1 ),
+                speed: ( result.speed !== undefined ? result.speed : 1 ),
+              };
+            } else {
+              this._extraAnimation = null;
+            }
+          } catch ( e ) {
+            throw e;
           }
         }
       };
@@ -329,6 +523,7 @@
       Object.defineProperties( Definition.prototype, {
         script: { get: function() { return this._definition.script; }, configurable: true },
         animations: { get: function() { return this._definition.animationList; }, configurable: true },
+        collider: { get: function() { return this._definition.collider; }, configurable: true },
       } );
 
       Definition.prototype.initialize = function() {
@@ -388,7 +583,11 @@
           throw new Error( 'Unknown definition format: ' + this._url );
           break;
         }
-        this._compileScript();
+        try {
+          this._compileScript();
+        } catch ( e ) {
+          throw e;
+        }
       };
 
       Definition.prototype._compileScript = function() {
@@ -454,7 +653,17 @@
           var childI = xml.childNodes[ii];
           switch ( childI.nodeName ) {
           case 'script':
-            object.script = childI.innerHTML.trim();
+            object.script = childI.innerHTML.trim()
+              .replace( /&apos;/g, "'" )
+              .replace( /&quot;/g, '"' )
+              .replace( /&gt;/g, '>' )
+              .replace( /&lt;/g, '<' )
+              .replace( /&amp;/g, '&' );
+            break;
+          case 'collider':
+            if ( $gameSystem.createColliderFromXML ) {
+              object.collider = $gameSystem.createColliderFromXML( childI );
+            }
             break;
           case 'animation-list':
             object.animationList = {

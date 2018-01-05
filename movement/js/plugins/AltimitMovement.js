@@ -232,7 +232,7 @@
  *  Plugin will automatically apply when ON.
  *
  * About:
- *  Version 0.41 Beta
+ *  Version 0.50 Beta
  *  Website https://github.com/AltimitSystems/mv-plugins/tree/master/movement
  */
 ( function() {
@@ -388,6 +388,10 @@
 
         this._staticEnableTouchMouse = INPUT_CONFIG.ENABLE_TOUCH_MOUSE;
         this._enableTouchMouse = INPUT_CONFIG.ENABLE_TOUCH_MOUSE;
+     };
+
+     Game_System.prototype.createColliderFromXML = function( xml ) {
+       return Collider.createFromXML( xml );
      };
 
    } )();
@@ -794,11 +798,6 @@
      */
     ( function() {
 
-      var Game_CharacterBase_initMembers = Game_CharacterBase.prototype.initMembers;
-      Game_CharacterBase.prototype.initMembers = function() {
-        Game_CharacterBase_initMembers.call( this );
-      };
-
       var Game_CharacterBase_update = Game_CharacterBase.prototype.update;
       Game_CharacterBase.prototype.update = function() {
         if ( this._moveTarget ) {
@@ -866,8 +865,9 @@
         this.moveVector( vx * this.stepDistance, vy * this.stepDistance );
       };
 
+      var Game_CharacterBase_isMoving = Game_CharacterBase.prototype.isMoving;
       Game_CharacterBase.prototype.isMoving = function() {
-        return this._isMoving;
+        return Game_CharacterBase_isMoving.call( this ) || this._isMoving;
       };
 
       var Game_CharacterBase_updateAnimation = Game_CharacterBase.prototype.updateAnimation;
@@ -875,7 +875,7 @@
         Game_CharacterBase_updateAnimation.call( this );
         this._wasMoving = this._isMoving;
         this._isMoving = this._x !== this._realX || this._y !== this._realY;
-        if ( !this.isMoving() ) {
+        if ( !this._isMoving ) {
           this.refreshBushDepth();
         }
       };
@@ -1212,6 +1212,10 @@
         this._collider = collider;
       };
 
+      Game_CharacterBase.prototype.direction8 = function() {
+        return this._direction8;
+      };
+
     } )();
 
   } )();
@@ -1414,7 +1418,7 @@
         Game_Character.prototype.update.call( this );
         this.updateScroll( lastScrolledX, lastScrolledY );
         this.updateVehicle();
-        if ( !this.isMoving() ) {
+        if ( !this._isMoving ) {
           this.updateNonmoving( wasMoving );
         }
         this._followers.update();
@@ -1931,9 +1935,8 @@
      */
     ( function() {
 
-      var Game_Follower_initMembers = Game_Follower.prototype.initMembers;
       Game_Follower.prototype.initMembers = function() {
-        Game_Follower_initMembers.call( this );
+        Game_Character.prototype.initMembers.call( this );
         this._collider = Collider.createFromXML( FOLLOWERS.COLLIDER_LIST );
         this._isFrozen = false;
         this._circularMovement = FOLLOWERS.CIRCULAR_MOVEMENT;
@@ -2022,7 +2025,7 @@
 
         if ( this.isOnLadder() ) {
           this.setDirection( 8 );
-        } else {
+        } else if ( !this._wasMoving ) {
           var adx = Math.abs( dx );
           var ady = Math.abs( dy );
           if ( adx > ady ) {
@@ -2717,140 +2720,6 @@
   } )();
 
   /**
-   * Sprite_Character
-   */
-  ( function() {
-
-    /**
-     * Overrides
-     */
-    ( function() {
-
-      var arrayContainsAny = function( a, b ) {
-        var result = a.filter( function( item ) { return b.indexOf( item ) > -1 } );
-        return result.length > 0;
-      };
-
-      var arrayContains = function( a, item ) {
-        return a.indexOf( item ) > -1;
-      };
-
-      var Sprite_Character_setCharacterBitmap = Sprite_Character.prototype.setCharacterBitmap;
-      Sprite_Character.prototype.setCharacterBitmap = function() {
-        this._characterExtensions = DefinitionManager.loadDefinition( 'img/characters/', this._character._characterName );
-        Sprite_Character_setCharacterBitmap.call( this );
-      };
-
-      var Sprite_Character_updateBitmap = Sprite_Character.prototype.updateBitmap;
-      Sprite_Character.prototype.updateBitmap = function() {
-        if ( this.isExtensionChanged() ) {
-          this._extensionUrl = this._characterExtensions._url;
-
-          if ( !this._character._hasCustomCollider && this._characterExtensions.collider ) {
-            // Set extension file collider
-            this._character.setCollider( this._characterExtensions.collider );
-          }
-        }
-
-        if ( this._characterExtensions && this._characterExtensions.isReady() ) {
-          var currentState = ( this._character._wasMoving ? ( this._character.realMoveSpeed() > 4 ? 'dashing' : 'moving' ) : 'standing' );
-          var currentDirection = this._character._direction8 || 2;
-
-          if ( currentState !== this._extraState || currentDirection !== this._extraDirection ) {
-            this._extraState = currentState;
-            this._extraDirection = currentDirection;
-            this._extraFrames = false;
-
-            var found = false;
-            var sets = this._characterExtensions.sets;
-            for ( var ii = 0; ii < sets.length; ii++ ) {
-              if ( found ) {
-                break;
-              }
-              if ( arrayContains( sets[ii].tags, currentState ) ) {
-                // Set match
-                for ( var jj = 0; jj < sets[ii].animations.length; jj++ ) {
-                  var animation = sets[ii].animations[jj];
-                  if ( animation.direction === currentDirection ) {
-                    this.bitmap = ImageManager.loadCharacter( sets[ii].sheet );
-                    this._extraFrames = true;
-                    this._extraCurrentFrame = 0;
-                    this.scale.x = animation.scaleX;
-                    this.scale.y = animation.scaleY;
-                    this._characterName = '';
-                    this._characterIndex = -1;
-                    found = true;
-                    break;
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        if ( !this._extraFrames ) {
-          this.scale.x = 1;
-          this.scale.y = 1;
-          Sprite_Character_updateBitmap.call( this );
-        }
-      };
-
-      var Sprite_Character_updateFrame = Sprite_Character.prototype.updateFrame;
-      Sprite_Character.prototype.updateFrame = function() {
-        if ( this._extraFrames ) {
-          var found = false;
-          var sets = this._characterExtensions.sets;
-          for ( var ii = 0; ii < sets.length; ii++ ) {
-            if ( found ) {
-              break;
-            }
-            if ( arrayContains( sets[ii].tags, this._extraState ) ) {
-              for ( var jj = 0; jj < sets[ii].animations.length; jj++ ) {
-                var animation = sets[ii].animations[jj];
-                if ( animation.direction === this._extraDirection ) {
-                  // Get animation frame
-                  var frame = animation.frames[this._extraCurrentFrame | 0];
-                  this._extraCurrentFrame = ( this._extraCurrentFrame + ( animation.rate / 60 ) ) % animation.frames.length;
-                  this.updateHalfBodySprites();
-                  if ( this._bushDepth > 0 ) {
-                    // TODO : Bush stuff
-                    var d = this._bushDepth;
-                    this._upperBody.setFrame( frame.x, frame.y, frame.width, frame.height - d );
-                    this._lowerBody.setFrame( frame.x, frame.y + frame.height - d, frame.width, d );
-                    this.setFrame( 0, 0, 0, 0 );
-                  } else {
-                    this.setFrame( frame.x, frame.y, frame.width, frame.height );
-                  }
-                  found = true;
-                  break;
-                }
-              }
-            }
-          }
-        } else {
-          Sprite_Character_updateFrame.call( this );
-        }
-      };
-
-    } )();
-
-    /**
-     * Extensions
-     */
-    ( function() {
-
-      Sprite_Character.prototype.isExtensionChanged = function() {
-        if ( this._characterExtensions && this._characterExtensions.isReady() ) {
-          return this._extensionUrl != this._characterExtensions._url;
-        }
-        return false;
-      };
-
-    } )();
-
-  } )();
-
-  /**
    * Sprite_Destination
    */
   ( function() {
@@ -2895,427 +2764,427 @@
 
   } )();
 
-  /**
-   * DefinitionManager
-   */
-  function DefinitionManager() {
-    throw new Error( 'This is a static class' );
-  }
-  ( function() {
-
-    /**
-     * DefinitionCache
-     */
-    function DefinitionCache() {
-      this.initialize.apply( this, arguments );
-    }
-    ( function() {
-
-      DefinitionCache.limit = 10 * 1000 * 1000;
-
-      DefinitionCache.prototype = Object.create( ImageCache.prototype );
-      DefinitionCache.prototype.constructor = DefinitionCache;
-
-      DefinitionCache.prototype.initialize = function() {
-        ImageCache.prototype.initialize.call( this );
-      };
-
-      DefinitionCache.prototype.add = function( key, value ) {
-        this._items[key] = {
-          def: value,
-          touch: Date.now(),
-          key: key
-        };
-        this._truncateCache();
-      };
-
-      DefinitionCache.prototype.get = function( key ) {
-        if ( this._items[key] ) {
-          var item = this._items[key];
-          item.touch = Date.now();
-          return item.def;
-        }
-        return null;
-      };
-
-      DefinitionCache.prototype.reserve = function( key, value, reservationId ) {
-          if ( !this._items[key] ) {
-            this._items[key] = {
-              def: value,
-              touch: Date.now(),
-              key: key
-            };
-          }
-          this._items[key].reservationId = reservationId;
-      };
-
-      DefinitionCache.prototype.releaseReservation = function( reservationId ) {
-        var items = this._items;
-        Object.keys( items )
-          .map( function( key ) {
-            return items[key];
-          } )
-          .forEach( function( item ) {
-            if ( item.reservationId === reservationId ) {
-              delete item.reservationId;
-            }
-          } );
-      };
-
-      DefinitionCache.prototype._truncateCache = function(){
-        var items = this._items;
-        var sizeLeft = DefinitionCache.limit;
-
-        Object.keys( items ).map( function( key ) {
-          return items[key];
-        } ).sort( function( a, b ) {
-            return b.touch - a.touch;
-        } ).forEach( function( item ) {
-          if ( sizeLeft > 0 || this._mustBeHeld( item ) ){
-            var def = item.def;
-            sizeLeft -= def._size();
-          } else {
-            delete items[item.key];
-          }
-        }.bind( this ) );
-      };
-
-      DefinitionCache.prototype._mustBeHeld = function( item ) {
-        if ( item.def.isRequestOnly() ) {
-          return false;
-        }
-        if ( item.reservationId ) {
-          return true;
-        }
-        if ( !item.def.isReady() ) {
-          return true;
-        }
-        return false;
-      };
-
-      DefinitionCache.prototype.isReady = function(){
-        var items = this._items;
-        return !Object.keys( items ).some( function( key ) {
-          return !items[key].def.isRequestOnly() && !items[key].def.isReady();
-        } );
-      };
-
-      DefinitionCache.prototype.getErrorDefinition = function() {
-        var items = this._items;
-        var def = null;
-        var iterate = function( key ) {
-          if ( items[key].def.isError() ){
-            def = items[key].def;
-            return true;
-          }
-          return false;
-        };
-        if ( Object.keys( items ).some( iterate ) ) {
-          return def;
-        }
-        return null;
-      };
-
-    } )();
-
-    /**
-     * Definition
-     */
-    function Definition() {
-      this.initialize.apply( this, arguments );
-    }
-    ( function() {
-
-      Definition.load = function( url ) {
-        var def = Object.create( Definition.prototype );
-        def._defer = true;
-        def.initialize();
-        def._decodeAfterRequest = true;
-        def._requestDef( url );
-        return def;
-      };
-
-      Definition.prototype.initialize = function() {
-        this._def = null;
-        this._url = '';
-        this._loadListeners = [];
-        this._loadingState = 'none';
-        this._decodeAfterRequest = false;
-      };
-
-      Definition.prototype.decode = function() {
-        switch ( this._loadingState ){
-        case 'requestCompleted':
-          this._loadingState = 'loaded';
-          this._decodeDefText();
-          this._callLoadListeners();
-          break;
-        case 'requesting':
-          this._decodeAfterRequest = true;
-          if ( !this._loader ) {
-            this._loader = ResourceHandler.createLoader( this._url, this._requestDef.bind( this, this._url ), this._onError.bind( this ) );
-            this._def.removeEventListener( 'error', this._errorListener );
-            this._def.addEventListener( 'error', this._errorListener = this._loader );
-          }
-          break;
-        case 'pending':
-        case 'purged':
-        case 'error':
-          this._decodeAfterRequest = true;
-          this._requestDef( this._url );
-          break;
-        }
-      };
-
-      Definition.prototype.isReady = function() {
-        return this._loadingState === 'loaded';
-      };
-
-      Definition.prototype.isError = function() {
-        return this._loadingState === 'error';
-      };
-
-      Definition.prototype.isRequestOnly = function(){
-        return !( this._decodeAfterRequest || this.isReady() );
-      };
-
-      Definition.prototype._decodeDefText = function() {
-        this.sets = [];
-
-        var xmlDoc = DOM_PARSER.parseFromString( '<doc>' + this._def.responseText + '</doc>', 'text/xml' ).childNodes[0];
-        for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
-          switch ( xmlDoc.childNodes[ii].nodeName ) {
-          case 'collider':
-            this.collider = Collider.createFromXML( xmlDoc.childNodes[ii] );
-            break;
-          case 'set':
-            this.sets.push( DefinitionManager.loadSet( xmlDoc.childNodes[ii] ) );
-            break;
-          }
-        }
-      };
-
-      Definition.prototype._requestDef = function( url ) {
-        this._url = url;
-        this._loadingState = 'requesting';
-
-        var xhr = new XMLHttpRequest();
-        xhr.open( "GET", url );
-        xhr.addEventListener( 'load', this._loadListener = Definition.prototype._onLoad.bind( this ) );
-        xhr.addEventListener( 'error', this._errorListener = this._loader || Definition.prototype._onError.bind( this ) );
-        xhr.send();
-        this._def = xhr;
-      };
-
-      Definition.prototype._callLoadListeners = function() {
-        while ( this._loadListeners.length > 0 ) {
-          var listener = this._loadListeners.shift();
-          listener( this );
-        }
-      };
-
-      Definition.prototype._onError = function() {
-        this._def.removeEventListener( 'load', this._loadListener );
-        this._def.removeEventListener( 'error', this._errorListener );
-        this._loadingState = 'error';
-      };
-
-      Definition.prototype._onLoad = function() {
-        this._def.removeEventListener( 'load', this._loadListener );
-        this._def.removeEventListener( 'error', this._errorListener );
-
-        switch ( this._loadingState ) {
-        case 'requesting':
-          this._loadingState = 'requestCompleted';
-          if ( this._decodeAfterRequest ) {
-            this.decode();
-          } else {
-            this._loadingState = 'purged';
-            this._clearDefInstance();
-          }
-          break;
-        }
-      };
-
-      Definition.prototype._clearDefInstance = function() {
-        this._def = null;
-        this._errorListener = null;
-        this._loadListener = null;
-      };
-
-      Definition.prototype._size = function() {
-        return this._def ? ( this._def.responseText ? this._def.responseText.length : 0 ) : 0;
-      };
-
-    } )();
-
-    DefinitionManager._cache = new DefinitionCache();
-    DefinitionManager._systemReservationId = Utils.generateRuntimeId();
-
-    DefinitionManager._generateCacheKey = function( path ) {
-      return path;
-    };
-
-    DefinitionManager.loadDefinition = function( folder, filename ) {
-      if ( filename ) {
-        var path = folder + encodeURIComponent( filename ) + '.xml';
-        return this.loadNormalDefinition( path );
-      } else {
-        return this.loadEmptyDefinition();
-      }
-    };
-
-    DefinitionManager.loadEmptyDefinition = function() {
-      var empty = this._cache.get( 'empty' );
-      if ( !empty ) {
-        empty = new Definition();
-        this._cache.add( 'empty', empty );
-        this._cache.reserve( 'empty', empty, this._systemReservationId );
-      }
-      return empty;
-    };
-
-    DefinitionManager.loadNormalDefinition = function( url ) {
-      var key = this._generateCacheKey( url );
-      var def = this._cache.get( key );
-      if ( !def ) {
-        if ( Utils.isNwjs() ) {
-          var fs = require( 'fs' );
-          var path = require( 'path' );
-          var base = path.dirname( process.mainModule.filename );
-          if ( fs.existsSync( path.join( base, url ) ) ) {
-            def = Definition.load( url );
-          } else {
-            def = this.loadEmptyDefinition();
-          }
-        } else {
-          def = Definition.load( url );
-        }
-        this._cache.add( key, def );
-      } else if ( !def.isReady() ){
-        def.decode();
-      }
-      return def;
-    };
-
-    DefinitionManager.clear = function() {
-      this._cache = new DefinitionCache();
-    };
-
-    DefinitionManager.isReady = function() {
-      return this._cache.isReady();
-    };
-
-    DefinitionManager.loadSet = function( xmlDoc ) {
-      var tag = xmlDoc.getAttribute( 'tag' );
-      var sheet = xmlDoc.getAttribute( 'sheet' );
-      var animations = [];
-      for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
-        switch ( xmlDoc.childNodes[ii].nodeName ) {
-        case 'animation':
-          animations.push( DefinitionManager.loadAnimation( xmlDoc.childNodes[ii] ) );
-          break;
-        }
-      }
-      return {
-        tags: tag.split( '|' ),
-        sheet: sheet,
-        animations: animations
-      };
-    };
-
-    DefinitionManager.loadAnimation = function( xmlDoc ) {
-      var rate = xmlDoc.getAttribute( 'rate' );
-      if ( rate ) {
-        rate = parseInt( rate );
-      } else {
-        rate = 0;
-      }
-
-      var direction = xmlDoc.getAttribute( 'direction' );
-      switch ( direction ) {
-      case 'down_left': case 'bottom_left': case 'lower_left': case 'lower_l':
-      case 'left_down': case 'left_bottom': case 'left_lower': case 'l_lower':
-      case 'south_west': case 'west_south': case '1':
-        direction = 1;
-        break;
-      case 'down': case 'bottom': case 'lower': case 'south': case '2':
-        direction = 2;
-        break;
-      case 'down_right': case 'bottom_right': case 'lower_right': case 'lower_r':
-      case 'right_down': case 'right_bottom': case 'right_lower': case 'r_lower':
-      case 'south_east': case 'east_south': case '3':
-        direction = 3;
-        break;
-      case 'left': case 'west': case '4':
-        direction = 4;
-        break;
-      case 'right': case 'east': case '6':
-        direction = 6;
-        break;
-      case 'up_left': case 'top_left': case 'upper_left': case 'upper_l':
-      case 'left_up': case 'left_top': case 'left_upper': case 'l_upper':
-      case 'north_west': case 'west_north': case '7':
-        direction = 7;
-        break;
-      case 'up': case 'top': case 'upper': case 'north': case '8':
-        direction = 8;
-        break;
-      case 'up_right': case 'top_right': case 'upper_right': case 'upper_r':
-      case 'right_up': case 'right_top': case 'right_upper': case 'r_upper':
-      case 'north_east': case 'east_north': case '9':
-        direction = 9;
-        break;
-      default:
-        direction = 5;
-        break;
-      }
-
-      var frames = [];
-      for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
-        switch ( xmlDoc.childNodes[ii].nodeName ) {
-        case 'frame':
-          frames.push( DefinitionManager.loadFrame( xmlDoc.childNodes[ii] ) );
-          break;
-        }
-      }
-
-      var scaleX = xmlDoc.getAttribute( 'sx' );
-      if ( scaleX ) {
-        scaleX = parseInt( scaleX );
-      } else {
-        scaleX = 1;
-      }
-      var scaleY = xmlDoc.getAttribute( 'sy' );
-      if ( scaleY ) {
-        scaleY = parseInt( scaleY );
-      } else {
-        scaleY = 1;
-      }
-
-      return {
-        rate: rate,
-        direction: direction,
-        frames: frames,
-        scaleX: scaleX,
-        scaleY: scaleY,
-      };
-    };
-
-    DefinitionManager.loadFrame = function( xmlDoc ) {
-      var x = parseInt( xmlDoc.getAttribute( 'x' ) );
-      var y = parseInt( xmlDoc.getAttribute( 'y' ) );
-      var width = parseInt( xmlDoc.getAttribute( 'width' ) );
-      var height = parseInt( xmlDoc.getAttribute( 'height' ) );
-      return {
-        x: x,
-        y: y,
-        width: width,
-        height: height,
-      };
-    };
-
-  } )();
+  // /**
+  //  * DefinitionManager
+  //  */
+  // function DefinitionManager() {
+  //   throw new Error( 'This is a static class' );
+  // }
+  // ( function() {
+  //
+  //   /**
+  //    * DefinitionCache
+  //    */
+  //   function DefinitionCache() {
+  //     this.initialize.apply( this, arguments );
+  //   }
+  //   ( function() {
+  //
+  //     DefinitionCache.limit = 10 * 1000 * 1000;
+  //
+  //     DefinitionCache.prototype = Object.create( ImageCache.prototype );
+  //     DefinitionCache.prototype.constructor = DefinitionCache;
+  //
+  //     DefinitionCache.prototype.initialize = function() {
+  //       ImageCache.prototype.initialize.call( this );
+  //     };
+  //
+  //     DefinitionCache.prototype.add = function( key, value ) {
+  //       this._items[key] = {
+  //         def: value,
+  //         touch: Date.now(),
+  //         key: key
+  //       };
+  //       this._truncateCache();
+  //     };
+  //
+  //     DefinitionCache.prototype.get = function( key ) {
+  //       if ( this._items[key] ) {
+  //         var item = this._items[key];
+  //         item.touch = Date.now();
+  //         return item.def;
+  //       }
+  //       return null;
+  //     };
+  //
+  //     DefinitionCache.prototype.reserve = function( key, value, reservationId ) {
+  //         if ( !this._items[key] ) {
+  //           this._items[key] = {
+  //             def: value,
+  //             touch: Date.now(),
+  //             key: key
+  //           };
+  //         }
+  //         this._items[key].reservationId = reservationId;
+  //     };
+  //
+  //     DefinitionCache.prototype.releaseReservation = function( reservationId ) {
+  //       var items = this._items;
+  //       Object.keys( items )
+  //         .map( function( key ) {
+  //           return items[key];
+  //         } )
+  //         .forEach( function( item ) {
+  //           if ( item.reservationId === reservationId ) {
+  //             delete item.reservationId;
+  //           }
+  //         } );
+  //     };
+  //
+  //     DefinitionCache.prototype._truncateCache = function(){
+  //       var items = this._items;
+  //       var sizeLeft = DefinitionCache.limit;
+  //
+  //       Object.keys( items ).map( function( key ) {
+  //         return items[key];
+  //       } ).sort( function( a, b ) {
+  //           return b.touch - a.touch;
+  //       } ).forEach( function( item ) {
+  //         if ( sizeLeft > 0 || this._mustBeHeld( item ) ){
+  //           var def = item.def;
+  //           sizeLeft -= def._size();
+  //         } else {
+  //           delete items[item.key];
+  //         }
+  //       }.bind( this ) );
+  //     };
+  //
+  //     DefinitionCache.prototype._mustBeHeld = function( item ) {
+  //       if ( item.def.isRequestOnly() ) {
+  //         return false;
+  //       }
+  //       if ( item.reservationId ) {
+  //         return true;
+  //       }
+  //       if ( !item.def.isReady() ) {
+  //         return true;
+  //       }
+  //       return false;
+  //     };
+  //
+  //     DefinitionCache.prototype.isReady = function(){
+  //       var items = this._items;
+  //       return !Object.keys( items ).some( function( key ) {
+  //         return !items[key].def.isRequestOnly() && !items[key].def.isReady();
+  //       } );
+  //     };
+  //
+  //     DefinitionCache.prototype.getErrorDefinition = function() {
+  //       var items = this._items;
+  //       var def = null;
+  //       var iterate = function( key ) {
+  //         if ( items[key].def.isError() ){
+  //           def = items[key].def;
+  //           return true;
+  //         }
+  //         return false;
+  //       };
+  //       if ( Object.keys( items ).some( iterate ) ) {
+  //         return def;
+  //       }
+  //       return null;
+  //     };
+  //
+  //   } )();
+  //
+  //   /**
+  //    * Definition
+  //    */
+  //   function Definition() {
+  //     this.initialize.apply( this, arguments );
+  //   }
+  //   ( function() {
+  //
+  //     Definition.load = function( url ) {
+  //       var def = Object.create( Definition.prototype );
+  //       def._defer = true;
+  //       def.initialize();
+  //       def._decodeAfterRequest = true;
+  //       def._requestDef( url );
+  //       return def;
+  //     };
+  //
+  //     Definition.prototype.initialize = function() {
+  //       this._def = null;
+  //       this._url = '';
+  //       this._loadListeners = [];
+  //       this._loadingState = 'none';
+  //       this._decodeAfterRequest = false;
+  //     };
+  //
+  //     Definition.prototype.decode = function() {
+  //       switch ( this._loadingState ){
+  //       case 'requestCompleted':
+  //         this._loadingState = 'loaded';
+  //         this._decodeDefText();
+  //         this._callLoadListeners();
+  //         break;
+  //       case 'requesting':
+  //         this._decodeAfterRequest = true;
+  //         if ( !this._loader ) {
+  //           this._loader = ResourceHandler.createLoader( this._url, this._requestDef.bind( this, this._url ), this._onError.bind( this ) );
+  //           this._def.removeEventListener( 'error', this._errorListener );
+  //           this._def.addEventListener( 'error', this._errorListener = this._loader );
+  //         }
+  //         break;
+  //       case 'pending':
+  //       case 'purged':
+  //       case 'error':
+  //         this._decodeAfterRequest = true;
+  //         this._requestDef( this._url );
+  //         break;
+  //       }
+  //     };
+  //
+  //     Definition.prototype.isReady = function() {
+  //       return this._loadingState === 'loaded';
+  //     };
+  //
+  //     Definition.prototype.isError = function() {
+  //       return this._loadingState === 'error';
+  //     };
+  //
+  //     Definition.prototype.isRequestOnly = function(){
+  //       return !( this._decodeAfterRequest || this.isReady() );
+  //     };
+  //
+  //     Definition.prototype._decodeDefText = function() {
+  //       this.sets = [];
+  //
+  //       var xmlDoc = DOM_PARSER.parseFromString( '<doc>' + this._def.responseText + '</doc>', 'text/xml' ).childNodes[0];
+  //       for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
+  //         switch ( xmlDoc.childNodes[ii].nodeName ) {
+  //         case 'collider':
+  //           this.collider = Collider.createFromXML( xmlDoc.childNodes[ii] );
+  //           break;
+  //         case 'set':
+  //           this.sets.push( DefinitionManager.loadSet( xmlDoc.childNodes[ii] ) );
+  //           break;
+  //         }
+  //       }
+  //     };
+  //
+  //     Definition.prototype._requestDef = function( url ) {
+  //       this._url = url;
+  //       this._loadingState = 'requesting';
+  //
+  //       var xhr = new XMLHttpRequest();
+  //       xhr.open( "GET", url );
+  //       xhr.addEventListener( 'load', this._loadListener = Definition.prototype._onLoad.bind( this ) );
+  //       xhr.addEventListener( 'error', this._errorListener = this._loader || Definition.prototype._onError.bind( this ) );
+  //       xhr.send();
+  //       this._def = xhr;
+  //     };
+  //
+  //     Definition.prototype._callLoadListeners = function() {
+  //       while ( this._loadListeners.length > 0 ) {
+  //         var listener = this._loadListeners.shift();
+  //         listener( this );
+  //       }
+  //     };
+  //
+  //     Definition.prototype._onError = function() {
+  //       this._def.removeEventListener( 'load', this._loadListener );
+  //       this._def.removeEventListener( 'error', this._errorListener );
+  //       this._loadingState = 'error';
+  //     };
+  //
+  //     Definition.prototype._onLoad = function() {
+  //       this._def.removeEventListener( 'load', this._loadListener );
+  //       this._def.removeEventListener( 'error', this._errorListener );
+  //
+  //       switch ( this._loadingState ) {
+  //       case 'requesting':
+  //         this._loadingState = 'requestCompleted';
+  //         if ( this._decodeAfterRequest ) {
+  //           this.decode();
+  //         } else {
+  //           this._loadingState = 'purged';
+  //           this._clearDefInstance();
+  //         }
+  //         break;
+  //       }
+  //     };
+  //
+  //     Definition.prototype._clearDefInstance = function() {
+  //       this._def = null;
+  //       this._errorListener = null;
+  //       this._loadListener = null;
+  //     };
+  //
+  //     Definition.prototype._size = function() {
+  //       return this._def ? ( this._def.responseText ? this._def.responseText.length : 0 ) : 0;
+  //     };
+  //
+  //   } )();
+  //
+  //   DefinitionManager._cache = new DefinitionCache();
+  //   DefinitionManager._systemReservationId = Utils.generateRuntimeId();
+  //
+  //   DefinitionManager._generateCacheKey = function( path ) {
+  //     return path;
+  //   };
+  //
+  //   DefinitionManager.loadDefinition = function( folder, filename ) {
+  //     if ( filename ) {
+  //       var path = folder + encodeURIComponent( filename ) + '.xml';
+  //       return this.loadNormalDefinition( path );
+  //     } else {
+  //       return this.loadEmptyDefinition();
+  //     }
+  //   };
+  //
+  //   DefinitionManager.loadEmptyDefinition = function() {
+  //     var empty = this._cache.get( 'empty' );
+  //     if ( !empty ) {
+  //       empty = new Definition();
+  //       this._cache.add( 'empty', empty );
+  //       this._cache.reserve( 'empty', empty, this._systemReservationId );
+  //     }
+  //     return empty;
+  //   };
+  //
+  //   DefinitionManager.loadNormalDefinition = function( url ) {
+  //     var key = this._generateCacheKey( url );
+  //     var def = this._cache.get( key );
+  //     if ( !def ) {
+  //       if ( Utils.isNwjs() ) {
+  //         var fs = require( 'fs' );
+  //         var path = require( 'path' );
+  //         var base = path.dirname( process.mainModule.filename );
+  //         if ( fs.existsSync( path.join( base, url ) ) ) {
+  //           def = Definition.load( url );
+  //         } else {
+  //           def = this.loadEmptyDefinition();
+  //         }
+  //       } else {
+  //         def = Definition.load( url );
+  //       }
+  //       this._cache.add( key, def );
+  //     } else if ( !def.isReady() ){
+  //       def.decode();
+  //     }
+  //     return def;
+  //   };
+  //
+  //   DefinitionManager.clear = function() {
+  //     this._cache = new DefinitionCache();
+  //   };
+  //
+  //   DefinitionManager.isReady = function() {
+  //     return this._cache.isReady();
+  //   };
+  //
+  //   DefinitionManager.loadSet = function( xmlDoc ) {
+  //     var tag = xmlDoc.getAttribute( 'tag' );
+  //     var sheet = xmlDoc.getAttribute( 'sheet' );
+  //     var animations = [];
+  //     for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
+  //       switch ( xmlDoc.childNodes[ii].nodeName ) {
+  //       case 'animation':
+  //         animations.push( DefinitionManager.loadAnimation( xmlDoc.childNodes[ii] ) );
+  //         break;
+  //       }
+  //     }
+  //     return {
+  //       tags: tag.split( '|' ),
+  //       sheet: sheet,
+  //       animations: animations
+  //     };
+  //   };
+  //
+  //   DefinitionManager.loadAnimation = function( xmlDoc ) {
+  //     var rate = xmlDoc.getAttribute( 'rate' );
+  //     if ( rate ) {
+  //       rate = parseInt( rate );
+  //     } else {
+  //       rate = 0;
+  //     }
+  //
+  //     var direction = xmlDoc.getAttribute( 'direction' );
+  //     switch ( direction ) {
+  //     case 'down_left': case 'bottom_left': case 'lower_left': case 'lower_l':
+  //     case 'left_down': case 'left_bottom': case 'left_lower': case 'l_lower':
+  //     case 'south_west': case 'west_south': case '1':
+  //       direction = 1;
+  //       break;
+  //     case 'down': case 'bottom': case 'lower': case 'south': case '2':
+  //       direction = 2;
+  //       break;
+  //     case 'down_right': case 'bottom_right': case 'lower_right': case 'lower_r':
+  //     case 'right_down': case 'right_bottom': case 'right_lower': case 'r_lower':
+  //     case 'south_east': case 'east_south': case '3':
+  //       direction = 3;
+  //       break;
+  //     case 'left': case 'west': case '4':
+  //       direction = 4;
+  //       break;
+  //     case 'right': case 'east': case '6':
+  //       direction = 6;
+  //       break;
+  //     case 'up_left': case 'top_left': case 'upper_left': case 'upper_l':
+  //     case 'left_up': case 'left_top': case 'left_upper': case 'l_upper':
+  //     case 'north_west': case 'west_north': case '7':
+  //       direction = 7;
+  //       break;
+  //     case 'up': case 'top': case 'upper': case 'north': case '8':
+  //       direction = 8;
+  //       break;
+  //     case 'up_right': case 'top_right': case 'upper_right': case 'upper_r':
+  //     case 'right_up': case 'right_top': case 'right_upper': case 'r_upper':
+  //     case 'north_east': case 'east_north': case '9':
+  //       direction = 9;
+  //       break;
+  //     default:
+  //       direction = 5;
+  //       break;
+  //     }
+  //
+  //     var frames = [];
+  //     for ( var ii = 0; ii < xmlDoc.childNodes.length; ii++ ) {
+  //       switch ( xmlDoc.childNodes[ii].nodeName ) {
+  //       case 'frame':
+  //         frames.push( DefinitionManager.loadFrame( xmlDoc.childNodes[ii] ) );
+  //         break;
+  //       }
+  //     }
+  //
+  //     var scaleX = xmlDoc.getAttribute( 'sx' );
+  //     if ( scaleX ) {
+  //       scaleX = parseInt( scaleX );
+  //     } else {
+  //       scaleX = 1;
+  //     }
+  //     var scaleY = xmlDoc.getAttribute( 'sy' );
+  //     if ( scaleY ) {
+  //       scaleY = parseInt( scaleY );
+  //     } else {
+  //       scaleY = 1;
+  //     }
+  //
+  //     return {
+  //       rate: rate,
+  //       direction: direction,
+  //       frames: frames,
+  //       scaleX: scaleX,
+  //       scaleY: scaleY,
+  //     };
+  //   };
+  //
+  //   DefinitionManager.loadFrame = function( xmlDoc ) {
+  //     var x = parseInt( xmlDoc.getAttribute( 'x' ) );
+  //     var y = parseInt( xmlDoc.getAttribute( 'y' ) );
+  //     var width = parseInt( xmlDoc.getAttribute( 'width' ) );
+  //     var height = parseInt( xmlDoc.getAttribute( 'height' ) );
+  //     return {
+  //       x: x,
+  //       y: y,
+  //       width: width,
+  //       height: height,
+  //     };
+  //   };
+  //
+  // } )();
 
   /**
    * CollisionMesh
