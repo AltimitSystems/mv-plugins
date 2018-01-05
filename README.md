@@ -1,6 +1,7 @@
 # mv-plugins
 Altimit Systems RPG Maker MV Plugin collection
 
+* [Altimit Character Animation](https://github.com/AltimitSystems/mv-plugins/tree/master/character-animation)
 * [Altimit Movement](https://github.com/AltimitSystems/mv-plugins/tree/master/movement)
 * [Altimit Movement Debug](https://github.com/AltimitSystems/mv-plugins/tree/master/movement-debug)
 
