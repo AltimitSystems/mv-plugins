@@ -2460,7 +2460,7 @@
           var layerIds2 = this.getPassageLayers(level);
           for( var layerIdx = 0; layerIdx < layerIds2.length; layerIdx++ ) {
             if(layerIds.indexOf(layerIds2[layerIdx]) === -1) {
-            layerIds.push(layerIds2[layerIdx]);
+              layerIds.push(layerIds2[layerIdx]);
             }
           }
         }
@@ -2468,7 +2468,7 @@
           var layerIds2 = this.getIsPassableLayers(level);
           for( var layerIdx = 0; layerIdx < layerIds2.length; layerIdx++ ) {
             if(layerIds.indexOf(layerIds2[layerIdx]) === -1) {
-            layerIds.push(layerIds2[layerIdx]);
+              layerIds.push(layerIds2[layerIdx]);
             }
           }
         }
@@ -2476,7 +2476,22 @@
           var layerIds2 = this.getTileFlagLayers(level);
           for( var layerIdx = 0; layerIdx < layerIds2.length; layerIdx++ ) {
             if(layerIds.indexOf(layerIds2[layerIdx]) === -1) {
-            layerIds.push(layerIds2[layerIdx]);
+              layerIds.push(layerIds2[layerIdx]);
+            }
+          }
+        }
+        for ( var ii = 0; ii < this.tiledData.layers.length; ii++ ) {
+          var layerLevel = 0;
+          var layer = this.tiledData.layers[ii];
+          if ( layer.type == "objectgroup" && layer.properties && layer.properties.collision == "mesh" ) {
+            if(layer.properties.level) {
+              layerLevel = layer.properties.level;
+            }
+            if( level !== layerLevel || (window.TiledManager && !TiledManager.hasHideProperties(layer)) ) {
+              continue;
+            }
+            if(layerIds.indexOf(ii) === -1) {
+              layerIds.push(ii);
             }
           }
         }
