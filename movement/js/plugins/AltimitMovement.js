@@ -1011,13 +1011,13 @@
           if($gameMap.tiledData) {
             levels = $gameMap.getMapLevels();
           }
-          for(var levelId = 0; levelId < levels.length; levelId++) {
+          for ( var levelId = 0; levelId < levels.length; levelId++ ) {
             var level = levels[levelId];
-            var layerIds = $gameMap.getVisibleLayers(level);
+            var layerIds = $gameMap.getVisibleLayers( level );
             for( var layerIdx = 0; layerIdx < layerIds.length; layerIdx++ ) {
               var layerId = layerIds[layerIdx];
-              if($gameMap.isVisibleMesh(level, layerId)) {
-                var mesh = $gameMap.pickMesh(mapMesh, level, layerId);
+              if( $gameMap.isVisibleMesh( level, layerId ) ) {
+                var mesh = $gameMap.pickMesh( mapMesh, level, layerId );
                 var mapColliders = Collider.polygonsWithinColliderList( bboxTests[ii].x + vx, bboxTests[ii].y + vy, bboxTests[ii].aabbox, 0, 0, mesh );
                 if ( mapColliders.length > 0 ) {
                   if ( move.x !== 0 ) {
@@ -2437,13 +2437,11 @@
             return this._levels;
           }
           var levels = [];
-          for(var idx = 0; idx < Math.max(this._collisionMap.length, this._arrowCollisionMap.length); idx++) {
-            if(
-              (idx < this._collisionMap.length && this._collisionMap[idx]) ||
-              (idx < this._arrowCollisionMap.length && this._arrowCollisionMap[idx]) ||
-              (this._tileFlags && idx < this._tileFlags.length && this._tileFlags[idx])
-            ) {
-              levels.push(idx);
+          for ( var idx = 0; idx < Math.max( this._collisionMap.length, this._arrowCollisionMap.length ); idx++ ) {
+            if( ( idx < this._collisionMap.length && this._collisionMap[idx] ) ||
+              ( idx < this._arrowCollisionMap.length && this._arrowCollisionMap[idx] ) ||
+              ( this._tileFlags && idx < this._tileFlags.length && this._tileFlags[idx] ) ) {
+              levels.push( idx );
             }
           }
           this._levels = levels;
@@ -2451,32 +2449,32 @@
         }
       }
       
-      Game_Map.prototype.getVisibleLayers = function(level) {
-        if(this._visibilityLayers) {
+      Game_Map.prototype.getVisibleLayers = function( level ) {
+        if ( this._visibilityLayers ) {
           return this._visibilityLayers;
         }
         var layerIds = ['main'];
-        if(this.getPassageLayers) {
-          var layerIds2 = this.getPassageLayers(level);
-          for( var layerIdx = 0; layerIdx < layerIds2.length; layerIdx++ ) {
-            if(layerIds.indexOf(layerIds2[layerIdx]) === -1) {
-              layerIds.push(layerIds2[layerIdx]);
+        if ( this.getPassageLayers ) {
+          var layerIds2 = this.getPassageLayers( level );
+          for ( var layerIdx = 0; layerIdx < layerIds2.length; layerIdx++ ) {
+            if ( layerIds.indexOf( layerIds2[layerIdx] ) === -1 ) {
+              layerIds.push( layerIds2[layerIdx] );
             }
           }
         }
-        if(this.getIsPassableLayers) {
-          var layerIds2 = this.getIsPassableLayers(level);
-          for( var layerIdx = 0; layerIdx < layerIds2.length; layerIdx++ ) {
-            if(layerIds.indexOf(layerIds2[layerIdx]) === -1) {
-              layerIds.push(layerIds2[layerIdx]);
+        if ( this.getIsPassableLayers ) {
+          var layerIds2 = this.getIsPassableLayers( level );
+          for ( var layerIdx = 0; layerIdx < layerIds2.length; layerIdx++ ) {
+            if ( layerIds.indexOf( layerIds2[layerIdx] ) === -1 ) {
+              layerIds.push( layerIds2[layerIdx] );
             }
           }
         }
-        if(this.getTileFlagLayers) {
+        if ( this.getTileFlagLayers ) {
           var layerIds2 = this.getTileFlagLayers(level);
-          for( var layerIdx = 0; layerIdx < layerIds2.length; layerIdx++ ) {
-            if(layerIds.indexOf(layerIds2[layerIdx]) === -1) {
-              layerIds.push(layerIds2[layerIdx]);
+          for ( var layerIdx = 0; layerIdx < layerIds2.length; layerIdx++ ) {
+            if (layerIds.indexOf( layerIds2[layerIdx] ) === -1 ) {
+              layerIds.push( layerIds2[layerIdx] );
             }
           }
         }
@@ -2484,14 +2482,14 @@
           var layerLevel = 0;
           var layer = this.tiledData.layers[ii];
           if ( layer.type == "objectgroup" && layer.properties && layer.properties.collision == "mesh" ) {
-            if(layer.properties.level) {
+            if ( layer.properties.level ) {
               layerLevel = layer.properties.level;
             }
-            if( level !== layerLevel || (window.TiledManager && !TiledManager.hasHideProperties(layer)) ) {
+            if ( level !== layerLevel || ( window.TiledManager && !TiledManager.hasHideProperties( layer ) ) ) {
               continue;
             }
-            if(layerIds.indexOf(ii) === -1) {
-              layerIds.push(ii);
+            if( layerIds.indexOf(ii) === -1 ) {
+              layerIds.push( ii );
             }
           }
         }
@@ -2499,28 +2497,28 @@
         return layerIds;
       }
       
-      Game_Map.prototype.pickMesh = function(mesh, level, layerId) {
-        if($gameMap.tiledData && mesh[level]) {
+      Game_Map.prototype.pickMesh = function( mesh, level, layerId ) {
+        if ( $gameMap.tiledData && mesh[level] ) {
           mesh = mesh[level];
-          if(mesh[layerId]) {
+          if ( mesh[layerId] ) {
             mesh = mesh[layerId];
           }
         }
         return mesh;
       }
       
-      Game_Map.prototype.isVisibleMesh = function(level, layerId) {
-        return !this.tiledData || layerId === 'main' || (this.tiledData.layers[layerId] && TiledManager.checkLayerHidden(this.tiledData.layers[layerId]));
+      Game_Map.prototype.isVisibleMesh = function( level, layerId ) {
+        return !this.tiledData || layerId === 'main' || ( this.tiledData.layers[layerId] && TiledManager.checkLayerHidden( this.tiledData.layers[layerId] ) );
       }
       
-      if(!Game_Map.prototype.renderIsPassable) {
-        Game_Map.prototype.renderIsPassable = function (x, y, d) {
+      if( !Game_Map.prototype.renderIsPassable ) {
+        Game_Map.prototype.renderIsPassable = function( x, y, d ) {
           var render = 'main';
           var level = 0;
-          if(arguments.length > 2) {
+          if ( arguments.length > 2 ) {
             render = arguments[2];
           }
-          if(arguments.length > 3) {
+          if ( arguments.length > 3 ) {
             level = arguments[3];
           }
           var tempLevel = this._currentMapLevel;
@@ -2530,36 +2528,36 @@
         }
       }
       
-      if(!Game_Map.prototype.renderIsBoatPassable) {
-        Game_Map.prototype.renderIsBoatPassable = function (x, y, d) {
+      if( !Game_Map.prototype.renderIsBoatPassable ) {
+        Game_Map.prototype.renderIsBoatPassable = function( x, y, d ) {
           var render = 'main';
           var level = 0;
-          if(arguments.length > 2) {
+          if ( arguments.length > 2 ) {
             render = arguments[2];
           }
-          if(arguments.length > 3) {
+          if ( arguments.length > 3 ) {
             level = arguments[3];
           }
           var tempLevel = this._currentMapLevel;
           this._currentMapLevel = level;
-          this.isBoatPassable(x, y, d);
+          this.isBoatPassable( x, y, d );
           this._currentMapLevel = tempLevel;
         }
       }
       
-      if(!Game_Map.prototype.renderIsShipPassable) {
-        Game_Map.prototype.renderIsShipPassable = function (x, y, d) {
+      if( !Game_Map.prototype.renderIsShipPassable ) {
+        Game_Map.prototype.renderIsShipPassable = function( x, y, d ) {
           var render = 'main';
           var level = 0;
-          if(arguments.length > 2) {
+          if ( arguments.length > 2 ) {
             render = arguments[2];
           }
-          if(arguments.length > 3) {
+          if ( arguments.length > 3 ) {
             level = arguments[3];
           }
           var tempLevel = this._currentMapLevel;
           this._currentMapLevel = level;
-          this.isShipPassable(x, y, d);
+          this.isShipPassable( x, y, d );
           this._currentMapLevel = tempLevel;
         }
       }
@@ -2588,8 +2586,8 @@
       };
 
       var Game_Map_regionId = Game_Map.prototype.regionId;
-      Game_Map.prototype.regionId = function(x, y) {
-        return Game_Map_regionId.call(this, Math.floor(x), Math.floor(y));
+      Game_Map.prototype.regionId = function( x, y ) {
+        return Game_Map_regionId.call( this, Math.floor(x), Math.floor(y) );
       };
 
     } )();
@@ -2811,16 +2809,16 @@
           else if ( bboxTests[ii].type == 8 ) { offsetX -= this.width(); offsetY -= this.height(); }
 
           var levels = [0];
-          if(this.tiledData) {
+          if ( this.tiledData ) {
             levels = this.getMapLevels();
           }
-          for(var levelId = 0; levelId < levels.length; levelId++) {
+          for ( var levelId = 0; levelId < levels.length; levelId++ ) {
             var level = levels[levelId];
-            var layerIds = this.getVisibleLayers(level);
-            for( var layerIdx = 0; layerIdx < layerIds.length; layerIdx++ ) {
+            var layerIds = this.getVisibleLayers( level );
+            for ( var layerIdx = 0; layerIdx < layerIds.length; layerIdx++ ) {
               var layerId = layerIds[layerIdx];
-              if(this.isVisibleMesh(level, layerId)) {
-                var mesh = this.pickMesh(collisionMesh, level, layerId);
+              if ( this.isVisibleMesh( level, layerId ) ) {
+                var mesh = this.pickMesh( collisionMesh, level, layerId );
                 var mapColliders = Collider.polygonsWithinColliderList( bboxTests[ii].x, bboxTests[ii].y, bboxTests[ii].aabbox, 0, 0, mesh );
                 if ( mapColliders.length > 0 ) {
                   for ( var jj = 0; jj < mapColliders.length; jj++ ) {
@@ -2969,12 +2967,12 @@
         }
 
         CollisionMesh.meshInMemory.mapId = mapId;
-        CollisionMesh.meshInMemory.mesh[CollisionMesh.WALK] = CollisionMesh.makeCollisionMesh( gameMap, (gameMap.tiledData ? gameMap.renderIsPassable : gameMap.isPassable) );
+        CollisionMesh.meshInMemory.mesh[CollisionMesh.WALK] = CollisionMesh.makeCollisionMesh( gameMap, ( gameMap.tiledData ? gameMap.renderIsPassable : gameMap.isPassable ) );
         if ( !gameMap.boat().isTransparent() ) {
-          CollisionMesh.meshInMemory.mesh[CollisionMesh.BOAT] = CollisionMesh.makeCollisionMesh( gameMap, (gameMap.tiledData ? gameMap.renderIsBoatPassable : gameMap.isBoatPassable) );
+          CollisionMesh.meshInMemory.mesh[CollisionMesh.BOAT] = CollisionMesh.makeCollisionMesh( gameMap, ( gameMap.tiledData ? gameMap.renderIsBoatPassable : gameMap.isBoatPassable ) );
         }
         if ( !gameMap.ship().isTransparent() ) {
-          CollisionMesh.meshInMemory.mesh[CollisionMesh.SHIP] = CollisionMesh.makeCollisionMesh( gameMap, (gameMap.tiledData ? gameMap.renderIsShipPassable : gameMap.isShipPassable) );
+          CollisionMesh.meshInMemory.mesh[CollisionMesh.SHIP] = CollisionMesh.makeCollisionMesh( gameMap, ( gameMap.tiledData ? gameMap.renderIsShipPassable : gameMap.isShipPassable ) );
         }
         if ( !gameMap.airship().isTransparent() ) {
           CollisionMesh.meshInMemory.mesh[CollisionMesh.AIRSHIP] = CollisionMesh.makeCollisionMesh( gameMap );
@@ -3043,12 +3041,12 @@
       if ( !passFunc ) {
         passFunc = function( x, y, d ) { return true; };
       }
-      if(arguments.length < 3 && gameMap.tiledData) {
+      if ( arguments.length < 3 && gameMap.tiledData ) {
         var levels = gameMap.getMapLevels();
         var collisionMeshCollection = {};
         for( var levelIdx = 0; levelIdx < levels.length; levelIdx++) {
           var level = levels[levelIdx];
-          var layerIds = gameMap.getVisibleLayers(level);
+          var layerIds = gameMap.getVisibleLayers( level );
           var collisionMeshSubdata = {};
           
           for( var layerIdx = 0; layerIdx < layerIds.length; layerIdx++ ) {
@@ -3224,13 +3222,13 @@
         for ( var ii = 0; ii < gameMap.tiledData.layers.length; ii++ ) {
           var layerLevel = 0;
           var layer = gameMap.tiledData.layers[ii];
-          if(layer.properties && layer.properties.level) {
+          if ( layer.properties && layer.properties.level ) {
             layerLevel = layer.properties.level;
           }
-          if( level !== layerLevel ) {
+          if ( level !== layerLevel ) {
             continue;
           }
-          if(render !== 'main' && ii !== render) {
+          if ( render !== 'main' && ii !== render ) {
             continue;
           }
           for ( var yy = 0; yy < layer.height; yy++ ) {
@@ -3277,10 +3275,10 @@
           var layerLevel = 0;
           var layer = gameMap.tiledData.layers[ii];
           if ( layer.type == "objectgroup" && layer.properties && layer.properties.collision == "mesh" ) {
-            if(layer.properties.level) {
+            if ( layer.properties.level ) {
               layerLevel = layer.properties.level;
             }
-            if( level !== layerLevel ) {
+            if ( level !== layerLevel ) {
               continue;
             }
             for ( var jj = 0; jj < layer.objects.length; jj++ ) {
