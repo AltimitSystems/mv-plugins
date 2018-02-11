@@ -1008,7 +1008,7 @@
 
           var mapMesh = $gameMap.collisionMesh( this._collisionType );
           var levels = [0];
-          if($gameMap.isTiledMap()) {
+          if($gameMap.tiledData) {
             levels = $gameMap.getMapLevels();
           }
           for(var levelId = 0; levelId < levels.length; levelId++) {
@@ -2485,7 +2485,7 @@
       }
       
       Game_Map.prototype.pickMesh = function(mesh, level, layerId) {
-        if($gameMap.isTiledMap() && mesh[level]) {
+        if($gameMap.tiledData() && mesh[level]) {
           mesh = mesh[level];
           if(mesh[layerId]) {
             mesh = mesh[layerId];
@@ -2495,7 +2495,7 @@
       }
       
       Game_Map.prototype.isVisibleMesh = function(level, layerId) {
-        return !this.isTiledMap() || layerId === 'main' || (this.tiledData.layers[layerId] && TiledManager.checkLayerHidden(this.tiledData.layers[layerId]));
+        return !this.tiledData() || layerId === 'main' || (this.tiledData.layers[layerId] && TiledManager.checkLayerHidden(this.tiledData.layers[layerId]));
       }
 
       Game_Map.prototype.tileId = function( x, y, z ) {
@@ -2744,7 +2744,7 @@
           else if ( bboxTests[ii].type == 8 ) { offsetX -= this.width(); offsetY -= this.height(); }
 
           var levels = [0];
-          if(this.isTiledMap()) {
+          if(this.tiledData()) {
             levels = this.getMapLevels();
           }
           for(var levelId = 0; levelId < levels.length; levelId++) {
@@ -2976,7 +2976,7 @@
       if ( !passFunc ) {
         passFunc = function( x, y, d ) { return true; };
       }
-      if(arguments.length < 3 && gameMap.isTiledMap()) {
+      if(arguments.length < 3 && gameMap.tiledData()) {
         var levels = gameMap.getMapLevels();
         var collisionMeshCollection = {};
         for( var levelIdx = 0; levelIdx < levels.length; levelIdx++) {
@@ -3134,7 +3134,7 @@
       }
 
       // TileD colliders
-      if ( gameMap.tiledData && (arguments.length < 3 || (render === 'main' && level === 0)) ) {
+      if ( gameMap.tiledData ) {
         var tileWidth = gameMap.tileWidth();
         var tileHeight = gameMap.tileHeight();
         var scale = ( gameMap.isHalfTile && gameMap.isHalfTile() ) ? 2 : 1;
@@ -3155,7 +3155,17 @@
 
         // Place tile colliders
         for ( var ii = 0; ii < gameMap.tiledData.layers.length; ii++ ) {
+          var layerLevel = 0;
           var layer = gameMap.tiledData.layers[ii];
+          if(layer.properties && layer.properties.level) {
+            layerLevel = layer.properties.level;
+          }
+          if( level !== layerLevel ) {
+            continue;
+          }
+          if(render !== 'main' && ii !== render) {
+            continue;
+          }
           for ( var yy = 0; yy < layer.height; yy++ ) {
             var row = yy * layer.width;
             for ( var xx = 0; xx < layer.width; xx++ ) {
@@ -3197,8 +3207,15 @@
 
         // Find collision mesh layers
         for ( var ii = 0; ii < gameMap.tiledData.layers.length; ii++ ) {
+          var layerLevel = 0;
           var layer = gameMap.tiledData.layers[ii];
           if ( layer.type == "objectgroup" && layer.properties && layer.properties.collision == "mesh" ) {
+            if(layer.properties.level) {
+              layerLevel = layer.properties.level;
+            }
+            if( level !== layerLevel ) {
+              continue;
+            }
             for ( var jj = 0; jj < layer.objects.length; jj++ ) {
               CollisionMesh.addTileDCollisionObject( 0, 0, layer.objects[jj], scale, tileWidth, tileHeight, colliders );
             }
