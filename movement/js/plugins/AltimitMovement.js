@@ -2500,7 +2500,7 @@
       }
       
       Game_Map.prototype.pickMesh = function(mesh, level, layerId) {
-        if($gameMap.tiledData() && mesh[level]) {
+        if($gameMap.tiledData && mesh[level]) {
           mesh = mesh[level];
           if(mesh[layerId]) {
             mesh = mesh[layerId];
@@ -2510,8 +2510,60 @@
       }
       
       Game_Map.prototype.isVisibleMesh = function(level, layerId) {
-        return !this.tiledData() || layerId === 'main' || (this.tiledData.layers[layerId] && TiledManager.checkLayerHidden(this.tiledData.layers[layerId]));
+        return !this.tiledData || layerId === 'main' || (this.tiledData.layers[layerId] && TiledManager.checkLayerHidden(this.tiledData.layers[layerId]));
       }
+      
+      if(!Game_Map.prototype.renderIsPassable) {
+        Game_Map.prototype.renderIsPassable = function (x, y, d) {
+          var render = 'main';
+          var level = 0;
+          if(arguments.length > 2) {
+            render = arguments[2];
+          }
+          if(arguments.length > 3) {
+            level = arguments[3];
+          }
+          var tempLevel = this._currentMapLevel;
+          this._currentMapLevel = level;
+          this.isPassable(x, y, d);
+          this._currentMapLevel = tempLevel;
+        }
+      }
+      
+      if(!Game_Map.prototype.renderIsBoatPassable) {
+        Game_Map.prototype.renderIsBoatPassable = function (x, y, d) {
+          var render = 'main';
+          var level = 0;
+          if(arguments.length > 2) {
+            render = arguments[2];
+          }
+          if(arguments.length > 3) {
+            level = arguments[3];
+          }
+          var tempLevel = this._currentMapLevel;
+          this._currentMapLevel = level;
+          this.isBoatPassable(x, y, d);
+          this._currentMapLevel = tempLevel;
+        }
+      }
+      
+      if(!Game_Map.prototype.renderIsShipPassable) {
+        Game_Map.prototype.renderIsShipPassable = function (x, y, d) {
+          var render = 'main';
+          var level = 0;
+          if(arguments.length > 2) {
+            render = arguments[2];
+          }
+          if(arguments.length > 3) {
+            level = arguments[3];
+          }
+          var tempLevel = this._currentMapLevel;
+          this._currentMapLevel = level;
+          this.isShipPassable(x, y, d);
+          this._currentMapLevel = tempLevel;
+        }
+      }
+      /* End Tiled Additions */
 
       Game_Map.prototype.tileId = function( x, y, z ) {
         x = x | 0;
@@ -2759,7 +2811,7 @@
           else if ( bboxTests[ii].type == 8 ) { offsetX -= this.width(); offsetY -= this.height(); }
 
           var levels = [0];
-          if(this.tiledData()) {
+          if(this.tiledData) {
             levels = this.getMapLevels();
           }
           for(var levelId = 0; levelId < levels.length; levelId++) {
@@ -2917,12 +2969,12 @@
         }
 
         CollisionMesh.meshInMemory.mapId = mapId;
-        CollisionMesh.meshInMemory.mesh[CollisionMesh.WALK] = CollisionMesh.makeCollisionMesh( gameMap, gameMap.isPassable );
+        CollisionMesh.meshInMemory.mesh[CollisionMesh.WALK] = CollisionMesh.makeCollisionMesh( gameMap, (gameMap.tiledData ? gameMap.renderIsPassable : gameMap.isPassable) );
         if ( !gameMap.boat().isTransparent() ) {
-          CollisionMesh.meshInMemory.mesh[CollisionMesh.BOAT] = CollisionMesh.makeCollisionMesh( gameMap, gameMap.isBoatPassable );
+          CollisionMesh.meshInMemory.mesh[CollisionMesh.BOAT] = CollisionMesh.makeCollisionMesh( gameMap, (gameMap.tiledData ? gameMap.renderIsBoatPassable : gameMap.isBoatPassable) );
         }
         if ( !gameMap.ship().isTransparent() ) {
-          CollisionMesh.meshInMemory.mesh[CollisionMesh.SHIP] = CollisionMesh.makeCollisionMesh( gameMap, gameMap.isShipPassable );
+          CollisionMesh.meshInMemory.mesh[CollisionMesh.SHIP] = CollisionMesh.makeCollisionMesh( gameMap, (gameMap.tiledData ? gameMap.renderIsShipPassable : gameMap.isShipPassable) );
         }
         if ( !gameMap.airship().isTransparent() ) {
           CollisionMesh.meshInMemory.mesh[CollisionMesh.AIRSHIP] = CollisionMesh.makeCollisionMesh( gameMap );
@@ -2991,7 +3043,7 @@
       if ( !passFunc ) {
         passFunc = function( x, y, d ) { return true; };
       }
-      if(arguments.length < 3 && gameMap.tiledData()) {
+      if(arguments.length < 3 && gameMap.tiledData) {
         var levels = gameMap.getMapLevels();
         var collisionMeshCollection = {};
         for( var levelIdx = 0; levelIdx < levels.length; levelIdx++) {
@@ -3008,8 +3060,8 @@
         }
         return collisionMeshCollection;
       }
-      var render = false;
-      var level = false;
+      var render = 'main';
+      var level = 0;
       if ( arguments.length > 2) {
         render = arguments[2];
       }
