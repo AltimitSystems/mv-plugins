@@ -798,8 +798,7 @@
      */
     ( function() {
 
-      var Game_CharacterBase_update = Game_CharacterBase.prototype.update;
-      Game_CharacterBase.prototype.update = function() {
+      Game_CharacterBase.prototype.continueProcessMoveCommand = function() {
         if ( this._moveTarget ) {
           var dx = $gameMap.directionX( this._x, this._moveTargetX );
           var dy = $gameMap.directionY( this._y, this._moveTargetY );
@@ -823,8 +822,6 @@
             }
           }
         }
-
-        Game_CharacterBase_update.call( this );
       };
 
       Game_CharacterBase.prototype.isOnLadder = function() {
@@ -1232,6 +1229,7 @@
 
       Game_Character.prototype.updateRoutineMove = function() {
         if ( this._moveTarget ) {
+          this.continueProcessMoveCommand();
           var moveRoute = this._moveRoute;
           if ( !moveRoute.skippable || this._wasMoving ) {
             return;
@@ -1244,6 +1242,7 @@
           var command = this._moveRoute.list[this._moveRouteIndex];
           if ( command ) {
             this.processMoveCommand( command );
+            this.continueProcessMoveCommand();
             this.advanceMoveRouteIndex();
           }
         }
